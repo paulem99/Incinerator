@@ -17,6 +17,10 @@ way.
 Before you push anything, tell the owner what changed and which version it is, and ask. Local commits and local
 builds are fine without asking.
 
+**Public notes stay short.** The repo is public, so commit messages, update notes (`make-release.js --notes`) and
+`CHANGELOG.md` only say which features were added or changed, in a line or two. Leave out implementation
+details, file names and debugging history. Add a `CHANGELOG.md` entry for every major update.
+
 ## Name
 
 The app is called **Incinerator** (it was "The Incinerator" up to 0.2.1). Some internal names stay "The Incinerator" on
