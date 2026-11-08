@@ -6,9 +6,11 @@ and your Apple Music library together in one list, and MP3s get a toe tag.
 
 ## Install
 
-Download **The.Incinerator.Setup.exe** from the [latest release](../../releases/latest) and run it. You don't
-need admin rights or anything else installed. After that, the app updates itself: new versions download in the
-background, and the gear in the top-left corner shows a drop of blood when one is ready to install.
+Run **The Incinerator Setup.exe**. You don't need admin rights or anything else installed.
+
+Every time you open the app, it checks for a newer version. If there is one, it asks: **UPDATE NOW** or
+**NOT NOW**. Nothing downloads until you say yes, and NOT NOW keeps your current version. While an update is
+waiting, the gear in the top-left corner shows a drop of blood, and you can install it from settings.
 
 For Apple Music, the app asks for a free one-time castLabs signing step on first launch (Widevine needs it).
 MP3s play without it.

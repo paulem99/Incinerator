@@ -1,0 +1,11 @@
+{
+  "version": "0.2.1",
+  "date": "2026-11-08T06:57:21.435Z",
+  "notes": "Updates now ask first: UPDATE NOW or NOT NOW every time a new version is out.",
+  "shell": "44.9.3",
+  "app": {
+    "file": "incinerator-app-0.2.1.pak",
+    "size": 328633,
+    "sha256": "83b7c3dbe8264b9ca88249297ec9b9647a560975d9da67280076269a07622fee"
+  }
+}

@@ -7,8 +7,12 @@ the design in steps with the owner, and ask about design details instead of gues
 ## Publishing rule (from the owner)
 
 **Never send anything to GitHub without the owner's explicit yes in the chat.** That covers pushing commits,
-pushing tags, and creating releases. Every installed copy of the app updates itself from the latest GitHub
-release, so publishing a release ships it to every player.
+pushing tags, and creating releases. Installed copies read `updates/latest.json` on `main`, so a push that
+includes `updates/` offers that version to every player.
+
+**The app never updates itself without asking.** When a newer version is out, the player asks UPDATE NOW or
+NOT NOW. Nothing downloads until the answer is yes, and NOT NOW keeps the current version running. Keep it that
+way.
 
 Before you push anything, tell the owner what changed and which version it is, and ask. Local commits and local
 builds are fine without asking.
@@ -21,9 +25,11 @@ builds are fine without asking.
 - `src/main.js` is the main process. It runs the player window, the hidden Apple Music window
   (music.apple.com with a Chrome user agent), the local library scan, the `incin://` file protocol, settings,
   and the log (`%APPDATA%\The Incinerator\log.txt`, opened with Ctrl+Shift+L).
-- `src/updater.js` checks `releases/latest/download/latest.json` 20 s after start and every 6 h. It downloads
-  the `.pak` (app update) or, when the Electron shell changes, the full installer. Every download is checked
-  against its sha256.
+- `src/updater.js` checks every time the app opens, then every 6 h. It reads `updates/latest.json` from the repo
+  (raw.githubusercontent.com) and `releases/latest/download/latest.json`, and uses whichever is newer. It
+  only downloads after the user says yes: the `.pak` (app update), or the full installer when the Electron
+  shell changes. Every download is checked against its sha256, then the app restarts into the new version.
+  This session can't create GitHub Releases (403), so normal updates go through `updates/`.
 - `src/signing.js` and `src/setup/` handle the one-time castLabs VMP signing on the user's PC, using the
   bundled portable Python (`resources/pyevs`). castLabs passwords are never stored: they go to the child
   process through environment variables only.
@@ -38,15 +44,17 @@ builds are fine without asking.
 ```
 npm ci
 bash scripts/build-installer.sh            # -> out/The Incinerator Setup.exe (downloads vendor/ on first run)
-node scripts/make-release.js --notes "..."  # -> out/release-<ver>/ (.pak, installer, latest.json), nothing published
-bash scripts/publish.sh --owner-said-yes    # ONLY after the owner says yes
+node scripts/make-release.js --notes "..."  # -> updates/ (.pak + latest.json), nothing published
+git commit ...                              # code changes, locally
+bash scripts/publish.sh --owner-said-yes    # ONLY after the owner says yes: commits updates/ and pushes main
 ```
 
 For each release:
 
 - Bump `version` in package.json.
-- If you change the castLabs Electron version, bump `incinerator.shell` in package.json. Players then get the
-  full installer instead of the `.pak`, and they have to sign the new exe once.
+- If you change the castLabs Electron version, bump `incinerator.shell` in package.json. Players then need
+  the full installer instead of the `.pak`, and they have to sign the new exe once. Run
+  `make-release.js --full`, and have the owner upload `out/release-<ver>/` to a GitHub Release by hand.
 - Test locally:
 
   ```

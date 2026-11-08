@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('incin', {
   onMediaKey: on('media-key'),
   updateGet: () => ipcRenderer.invoke('update:get'),
   updateCheck: () => ipcRenderer.send('update:check'),
-  updateApply: () => ipcRenderer.send('update:apply'),
+  updateInstall: () => ipcRenderer.send('update:install'),
+  updateDecline: () => ipcRenderer.send('update:decline'),
   onUpdate: on('update:status')
 });

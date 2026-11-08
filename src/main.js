@@ -332,9 +332,9 @@ if (single) app.whenReady().then(async () => {
   wireIpc();
   signing.wireSigningIpc();
   ipcMain.on('setup:open', () => signing.openSetup(playerWin, settings, saveSettings));
+  updater.init({ log, send, getSettings: () => settings, onQuit: (relaunch) => { quitting = true; if (relaunch) app.relaunch(); app.quit(); } });
   createPlayer();
   registerMediaKeys();
-  updater.init({ log, send, getSettings: () => settings, onQuit: (relaunch) => { quitting = true; if (relaunch) app.relaunch(); app.quit(); } });
   const unsigned = signing.needsSigning();
   log('start', `v${VERSION} electron ${process.versions.electron} signed=${!unsigned} scale=${settings.scale} folder=${settings.folder ? 'yes' : 'no'}`);
   if (unsigned) {

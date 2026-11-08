@@ -203,8 +203,8 @@ function gear() {
   for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]) L.push([GX0 + dx, GY0 + dy, [176, 178, 182]]);
   const seen = new Set(); for (const [x, y] of L) { const k = y * OW + x; if (!seen.has(k)) { seen.add(k); shade(x + 1, y + 1, 0.55); } }
   for (const [x, y, c] of L) oput(x, y, hv ? [Math.min(255, c[0] * 0.6 + 120), c[1] * 0.45, c[2] * 0.45] : c);
-  if (upd && upd.state === 'ready') {
-    // A fresh drop of blood under the gear: an update is waiting.
+  if (upd && (upd.state === 'available' || upd.state === 'declined')) {
+    // A fresh drop of blood under the gear: an update is out (and waits for a yes).
     const k = 0.5 + 0.5 * Math.sin(performance.now() / 1000 * Math.PI * 2 * 1.2), dc = [150 + 100 * k, 18 + 40 * k, 18 + 30 * k], dx = GX0 - 2, dy = GY0 + 9, DROP = [[1, 0], [1, 1], [0, 2], [1, 2], [2, 2], [0, 3], [1, 3], [2, 3], [1, 4]];
     for (const [a, b] of DROP) shade(dx + a + 1, dy + b + 1, 0.5);
     for (const [a, b] of DROP) oput(dx + a, dy + b, (a === 0 && b === 2) ? [255, 200, 200] : dc);
@@ -235,24 +235,56 @@ function settingsScreen() {
   if (upd) { const v = 'V' + upd.version; bt(sp, v, 4, 72, 1, SC2, { sh: SHD2 }); btnText('set:upd', 40, 70, 114, 12, updLabel()); }
   btnText('set:test', 4, 84, 80, 12, 'PLAY INTRO'); btnText('set:done', 100, 84, 54, 12, 'DONE');
 }
-// ---------- updates (GitHub Releases, see updater.js) ----------
-let upd = null, pendingToast = null;
+// ---------- updates (see updater.js): never installs without a yes ----------
+let upd = null, pendingToast = null, updAsk = false;
 function updLabel() {
   const s = upd ? upd.state : 'idle';
   if (s === 'checking') return 'CHECKING...';
+  if (s === 'available' || s === 'declined') return 'UPDATE TO ' + upd.latest;
   if (s === 'downloading') return 'DOWNLOADING ' + Math.floor((upd.progress || 0) * 100) + '%';
-  if (s === 'ready') return 'RESTART TO UPDATE';
+  if (s === 'ready') return 'RESTARTING...';
   if (s === 'current') return 'UP TO DATE';
-  if (s === 'error') return 'CHECK FAILED';
+  if (s === 'error') return upd.failedInstall ? 'RETRY UPDATE' : 'CHECK FAILED';
   return 'CHECK FOR UPDATES';
 }
 function onUpd(u) {
   if (!u) return;
   const was = upd && upd.state; upd = u;
-  if (u.state === 'ready' && was !== 'ready') { const m = 'UPDATE ' + u.latest + ' READY. CLICK THE GEAR TO RESTART'; if (hudOn) toast(m, 8000); else pendingToast = m; }
+  if (u.state === 'available' && was !== 'available') updAsk = true;   // ask, every time a new version turns up
+  if (u.state === 'declined') updAsk = false;
   dirty();
 }
-function updAct() { if (!upd) return; if (upd.state === 'ready') API.updateApply(); else if (upd.state !== 'checking' && upd.state !== 'downloading') API.updateCheck(); }
+const updBusy = () => upd && (upd.state === 'downloading' || upd.state === 'ready');
+function updYes() { if (!upd || updBusy()) return; updAsk = true; setOpen = false; API.updateInstall(); }
+function updNo() { if (updBusy()) return; updAsk = false; if (upd && (upd.state === 'available' || (upd.state === 'error' && upd.failedInstall))) API.updateDecline(); }
+function updAct() {
+  if (!upd || upd.state === 'checking' || updBusy()) return;
+  if (upd.state === 'available' || upd.state === 'declined' || (upd.state === 'error' && upd.failedInstall)) updYes();
+  else API.updateCheck();
+}
+const kb = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB';
+// The question: UPDATE NOW / NOT NOW. Stays up to show the download, then the app restarts.
+function updateScreen(tn) {
+  for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) sp(x, y, y % 2 ? SCB1 : SCB2);
+  const st = upd.state, failed = st === 'error' && upd.failedInstall;
+  bt(sp, failed ? 'UPDATE FAILED' : 'UPDATE FOUND', 4, 2, 1, SCT, { sh: SHD });
+  for (let x = 4; x < 154; x += 2) sp(x, 13, SCD);
+  bt(sp, 'V' + upd.version + ' > V' + upd.latest, 4, 18, 1, SC1, { sh: SHD2 });
+  if (upd.notes) marq(sp, norm(upd.notes), 4, 31, 150, SC2, tn, SHD2);
+  if (failed) bt(sp, "COULDN'T DOWNLOAD IT. TRY AGAIN?", 4, 44, 1, SC2, { sh: SHD2 });
+  else bt(sp, (upd.kind === 'installer' ? 'FULL INSTALL, ' : '') + kb(upd.size || 0), 4, 44, 1, SC2, { sh: SHD2 });
+  if (st === 'downloading' || st === 'ready') {
+    // Barbed-wire progress bar.
+    const x0 = 4, x1 = 154, f = st === 'ready' ? 1 : Math.max(0, Math.min(1, upd.progress || 0)), kx = x0 + Math.round(f * (x1 - x0 - 1)), wy = 64;
+    for (let x = x0; x < x1; x++) { const sw = Math.round(Math.sin(x * 0.9) * 0.6); sp(x, wy + sw, x <= kx ? SC1 : SCD); }
+    for (let x = x0 + 4; x < x1; x += 8) { const c = x <= kx ? SC2 : SCD; sp(x - 1, wy - 2, c); sp(x + 1, wy - 2, c); sp(x - 1, wy + 2, c); sp(x + 1, wy + 2, c); }
+    const t = st === 'ready' ? 'RESTARTING...' : 'DOWNLOADING ' + Math.floor(f * 100) + '%';
+    bt(sp, t, (SW - bw(t, 1)) >> 1, 80, 1, SCT, { sh: SHD });
+  } else {
+    btnText('upd:yes', 4, 80, 72, 14, failed ? 'TRY AGAIN' : 'UPDATE NOW');
+    btnText('upd:no', 82, 80, 72, 14, 'NOT NOW');
+  }
+}
 function setSlider(h, x) { const r = h.srow, f = Math.max(0, Math.min(1, (x - h.sx0) / Math.max(1, h.sx1 - h.sx0 - 1))); r.set(Math.round(r.min + f * (r.max - r.min))); slDrag = r.id; dirty(); }
 function replayIntro() { setOpen = false; if (introSrc) { try { introSrc.stop(); } catch { } } st = performance.now(); last = -1; playFx(5.4, introSfx).then((b) => { introSrc = b; }); }
 
@@ -438,7 +470,7 @@ function hud(tn) {
   hits.push({ id: 'seek', x: SX + wx0, y: SY + wy - 3, w: ww, h: 7 });
   btn('prev', 82, 86, 13, 12, PREV); btn('play', 98, 86, 15, 12, pb.playing ? PAUSE : PLAY); btn('next', 116, 86, 13, 12, NEXT); btnText('tog', 4, 86, 52, 12, mode === 'art' ? 'SHOW VIS' : 'SHOW ART'); btn('search', 133, 86, 21, 12, MAG);
 }
-function screen(q, tn) { if (q >= 1 && setOpen) { settingsScreen(); return; } if (q < 1) { const cxm = SW / 2, cym = SH / 2; let w, h; if (q < 0.35) { w = Math.max(2, SW * q / 0.35); h = 1; } else { w = SW; h = Math.max(1, SH * (q - 0.35) / 0.65); } const y0 = Math.round(cym - h / 2), y1 = y0 + Math.max(1, Math.round(h)), x0 = Math.round(cxm - w / 2), x1 = x0 + Math.round(w); for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) sp(x, y, h < 3 ? SCL : (y % 2 ? SCB1 : SCB2)); return; } hud(tn); }
+function screen(q, tn) { if (q >= 1 && updAsk && upd && upd.latest) { updateScreen(tn); return; } if (q >= 1 && setOpen) { settingsScreen(); return; } if (q < 1) { const cxm = SW / 2, cym = SH / 2; let w, h; if (q < 0.35) { w = Math.max(2, SW * q / 0.35); h = 1; } else { w = SW; h = Math.max(1, SH * (q - 0.35) / 0.65); } const y0 = Math.round(cym - h / 2), y1 = y0 + Math.max(1, Math.round(h)), x0 = Math.round(cxm - w / 2), x1 = x0 + Math.round(w); for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) sp(x, y, h < 3 ? SCL : (y % 2 ? SCB1 : SCB2)); return; } hud(tn); }
 
 // ---------- drawer contents ----------
 const TABS = ['ARTISTS', 'ALBUMS', 'SONGS', 'RECENT'];
@@ -653,6 +685,8 @@ function act(h) {
   else if (id === 'set:done') setOpen = false;
   else if (id === 'set:test') replayIntro();
   else if (id === 'set:upd') updAct();
+  else if (id === 'upd:yes') updYes();
+  else if (id === 'upd:no') updNo();
   else if (id === 'set:intro') { introOn = !introOn; API.setSettings({ intro: introOn }); }
   else if (id === 'set:size-') API.scale(-1); else if (id === 'set:size+') API.scale(1);
   else if (id.startsWith('tab')) setTab(id.slice(3));
@@ -696,6 +730,10 @@ cv.addEventListener('wheel', (e) => {
 window.addEventListener('keydown', (e) => {
   startLoopback();
   if (!hudOn) { st = performance.now() - T.scr[1] * 1000; dirty(); return; }
+  if (updAsk && upd && upd.latest) {
+    if (e.key === 'Enter') { updYes(); dirty(); return; }
+    if (e.key === 'Escape') { updNo(); dirty(); return; }
+  }
   if (searchQ !== null) {
     if (e.key === 'Escape') { endSearch(); return; }
     if (e.key === 'Enter') { const r = searchResults(); if (r.length) playList(r, 0); return; }

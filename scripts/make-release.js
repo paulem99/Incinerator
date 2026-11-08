@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 'use strict';
-// Gets a release ready in out/release-<version>/ without publishing anything:
-//   incinerator-app-<version>.pak   the small app update most players download
-//   The.Incinerator.Setup.exe       the full installer (for new installs and Electron changes)
-//   latest.json                     what the updater reads
-//   notes.txt                       release notes
+// Gets a version ready to ship, without publishing anything:
+//   updates/incinerator-app-<version>.pak   the app update (code + art), ~330 KB
+//   updates/latest.json                     what installed copies read (raw.githubusercontent.com/<repo>/main/updates/)
+// Older .pak files in updates/ are removed. Players get it once updates/ is pushed (scripts/publish.sh), and the
+// app asks them before installing.
 //
-//   node scripts/make-release.js --notes "what changed" [--no-installer]
-// The installer is taken from out/The Incinerator Setup.exe (build it first with scripts/build-installer.sh).
-// Publishing is a separate step (scripts/publish.sh), and only happens after the owner says yes.
+//   node scripts/make-release.js --notes "what changed"
+//   node scripts/make-release.js --notes "..." --full
+// --full also puts out/release-<version>/ together (installer + latest.json) for a GitHub Release the owner
+// uploads by hand. That's only needed when the Electron shell changes (incinerator.shell in package.json).
 
 const fs = require('fs');
 const path = require('path');
@@ -20,13 +21,13 @@ const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
 const args = process.argv.slice(2);
 const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
 const notes = opt('--notes') || '';
-const withInstaller = !args.includes('--no-installer');
+const full = args.includes('--full');
 
-const dir = path.join(ROOT, 'out', `release-${pkg.version}`);
-fs.rmSync(dir, { recursive: true, force: true });
-fs.mkdirSync(dir, { recursive: true });
-
-const pak = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'pack-app.js'), path.join(dir, `incinerator-app-${pkg.version}.pak`)], { encoding: 'utf8' }));
+const UPD = path.join(ROOT, 'updates');
+fs.mkdirSync(UPD, { recursive: true });
+const pakName = `incinerator-app-${pkg.version}.pak`;
+for (const f of fs.readdirSync(UPD)) if (/^incinerator-app-.*\.pak$/.test(f) && f !== pakName) fs.rmSync(path.join(UPD, f));
+const pak = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'pack-app.js'), path.join(UPD, pakName)], { encoding: 'utf8' }));
 const manifest = {
   version: pkg.version,
   date: new Date().toISOString(),
@@ -34,17 +35,19 @@ const manifest = {
   shell: pkg.incinerator.shell,
   app: { file: pak.file, size: pak.size, sha256: pak.sha256 }
 };
+fs.writeFileSync(path.join(UPD, 'latest.json'), JSON.stringify(manifest, null, 2) + '\n');
+console.log(`${pkg.version} ready in updates/ (not published): ${pak.file} ${pak.size} bytes`);
 
-if (withInstaller) {
+if (full) {
   const src = path.join(ROOT, 'out', 'The Incinerator Setup.exe');
-  if (!fs.existsSync(src)) throw new Error('out/The Incinerator Setup.exe is missing: run scripts/build-installer.sh first (or pass --no-installer)');
-  const file = 'The.Incinerator.Setup.exe', dest = path.join(dir, file);
-  fs.copyFileSync(src, dest);
-  const buf = fs.readFileSync(dest);
-  manifest.installer = { file, size: buf.length, sha256: crypto.createHash('sha256').update(buf).digest('hex') };
+  if (!fs.existsSync(src)) throw new Error('out/The Incinerator Setup.exe is missing: run scripts/build-installer.sh first');
+  const dir = path.join(ROOT, 'out', `release-${pkg.version}`);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  const file = 'The.Incinerator.Setup.exe', buf = fs.readFileSync(src);
+  fs.writeFileSync(path.join(dir, file), buf);
+  fs.copyFileSync(path.join(UPD, pakName), path.join(dir, pakName));
+  const rel = { ...manifest, installer: { file, size: buf.length, sha256: crypto.createHash('sha256').update(buf).digest('hex') } };
+  fs.writeFileSync(path.join(dir, 'latest.json'), JSON.stringify(rel, null, 2) + '\n');
+  console.log(`GitHub Release files for the owner to upload by hand: ${path.relative(ROOT, dir)}/`);
 }
-
-fs.writeFileSync(path.join(dir, 'latest.json'), JSON.stringify(manifest, null, 2) + '\n');
-fs.writeFileSync(path.join(dir, 'notes.txt'), (notes || `The Incinerator ${pkg.version}`) + '\n\nInstall: download The.Incinerator.Setup.exe below and run it. Already installed? The app updates itself.\n');
-console.log(`release ${pkg.version} ready in ${path.relative(ROOT, dir)}/ (not published)`);
-for (const f of fs.readdirSync(dir)) console.log(`  ${f}  ${fs.statSync(path.join(dir, f)).size} bytes`);
