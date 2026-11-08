@@ -1,11 +1,11 @@
 {
-  "version": "0.2.3",
-  "date": "2026-11-08T07:31:13.804Z",
-  "notes": "Fixes Apple Music 'Authorization failed': the Apple sign-in popup can open now.",
+  "version": "0.2.4",
+  "date": "2026-11-08T07:35:57.621Z",
+  "notes": "Apple Music sign-in sticks now, and your library loads. Update checks see new versions right away.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.3.pak",
-    "size": 330626,
-    "sha256": "be7f28fed12a25d541924fc2669b1c20ac30168f601c752bc130f5cef55dcf1d"
+    "file": "incinerator-app-0.2.4.pak",
+    "size": 331436,
+    "sha256": "042f603f4be61d91608a864c6513afc1a4ae2b821c5e5b23fdff8dd2136516ac"
   }
 }

@@ -117,8 +117,24 @@
     throw lastErr || new Error('Could not queue that song');
   }
 
-  function init() {
-    const E = (name, fn) => { try { mk.addEventListener(name, fn); } catch (_) {} };
+  // Apple's page can swap its MusicKit player for a new one (it does right after sign-in), so the hook always
+  // follows whatever MusicKit.getInstance() returns now, instead of holding on to the first one it saw.
+  let ready = false, lastAuth = null, seenAuth = null, seenCount = 0;
+  function current() { try { return window.MusicKit && typeof window.MusicKit.getInstance === 'function' ? window.MusicKit.getInstance() : null; } catch (_) { return null; } }
+  // Sign-in state, reported once it has held for a second (it flickers while Apple swaps players).
+  function checkAuth() {
+    if (!mk) return;
+    const a = !!mk.isAuthorized;
+    if (a !== seenAuth) { seenAuth = a; seenCount = 0; return; }
+    if (++seenCount < 2 || a === lastAuth) return;
+    lastAuth = a;
+    post({ type: 'auth', authorized: a });
+    if (a) loadLibrary();
+  }
+  function bind(inst) {
+    const replaced = !!mk;
+    mk = inst;
+    const E = (name, fn) => { try { inst.addEventListener(name, (e) => { if (inst === mk) fn(e); }); } catch (_) {} };
     E('playbackStateDidChange', (e) => {
       sendState();
       const s = (e && e.state !== undefined) ? e.state : mk.playbackState;
@@ -132,13 +148,13 @@
     E('nowPlayingItemDidChange', sendState);
     E('playbackVolumeDidChange', sendState);
     E('playbackTimeDidChange', () => { const now = Date.now(); if (now - lastTimePost > 240) { lastTimePost = now; sendState(); } });
-    E('authorizationStatusDidChange', () => {
-      post({ type: 'auth', authorized: !!mk.isAuthorized });
-      if (mk.isAuthorized) loadLibrary();
-    });
+    E('authorizationStatusDidChange', () => checkAuth());
     E('mediaPlaybackError', (e) => post({ type: 'error', where: 'playback', message: String((e && (e.message || e.description)) || 'playback error') }));
-    post({ type: 'ready', authorized: !!mk.isAuthorized });
-    if (mk.isAuthorized) loadLibrary();
+    if (!ready) {
+      ready = true; lastAuth = seenAuth = !!inst.isAuthorized;
+      post({ type: 'ready', authorized: lastAuth });
+      if (lastAuth) loadLibrary();
+    } else if (replaced) post({ type: 'note', message: 'Apple Music swapped its player; following the new one (signed in: ' + !!inst.isAuthorized + ')' });
   }
 
   window.addEventListener('message', async (e) => {
@@ -156,7 +172,7 @@
         case 'volume': mk.volume = Math.max(0, Math.min(1, m.value)); break;
         case 'playSong': await playSong(m.id, m.catalogId); break;
         case 'loadLibrary': await loadLibrary(); break;
-        case 'authorize': await mk.authorize(); post({ type: 'auth', authorized: !!mk.isAuthorized }); break;
+        case 'authorize': await mk.authorize(); checkAuth(); break;
         case 'state': sendState(); break;
       }
     } catch (err) {
@@ -165,12 +181,12 @@
   });
 
   const started = Date.now();
-  const wait = setInterval(() => {
-    try {
-      const inst = window.MusicKit && typeof window.MusicKit.getInstance === 'function' ? window.MusicKit.getInstance() : null;
-      if (inst) { clearInterval(wait); mk = inst; init(); }
-      else if (Date.now() - started > 60000) { clearInterval(wait); post({ type: 'error', where: 'musickit', message: 'Apple Music never finished loading' }); }
-    } catch (_) {}
-  }, 300);
+  let warned = false;
+  setInterval(() => {
+    const inst = current();
+    if (inst && inst !== mk) bind(inst);
+    else if (!inst && !mk && !warned && Date.now() - started > 60000) { warned = true; post({ type: 'error', where: 'musickit', message: 'Apple Music never finished loading' }); }
+    checkAuth();
+  }, 500);
   return true;
 })();

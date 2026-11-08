@@ -30,11 +30,19 @@ const SHELL = String(process.versions.electron || '').split('+')[0];
 // Developer testing only: a release server on this computer.
 const DEV_BASE = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)?$/.test(process.env.INCIN_UPDATE_BASE || '') ? process.env.INCIN_UPDATE_BASE.replace(/\/$/, '') : null;
 const RAW = `https://raw.githubusercontent.com/${REPO}/main/updates`;
+// Each source lists where to read latest.json, in order. The GitHub API comes first because it's up to date the
+// moment something is pushed (raw.githubusercontent.com can serve the old file for ~5 minutes). If the API turns
+// us away (it allows 60 checks an hour per network), the raw file is the fallback.
 const SOURCES = DEV_BASE ? [
-  { name: 'dev', manifest: () => `${DEV_BASE}/latest.json`, asset: (v, f) => `${DEV_BASE}/${encodeURIComponent(f)}` }
+  { name: 'dev', manifests: [{ url: () => `${DEV_BASE}/latest.json` }], asset: (v, f) => `${DEV_BASE}/${encodeURIComponent(f)}` }
 ] : [
-  { name: 'repo', manifest: () => `${RAW}/latest.json?t=${Date.now()}`, asset: (v, f) => `${RAW}/${encodeURIComponent(f)}` },
-  { name: 'releases', manifest: () => `https://github.com/${REPO}/releases/latest/download/latest.json`, asset: (v, f) => `https://github.com/${REPO}/releases/download/v${v}/${encodeURIComponent(f)}` }
+  { name: 'repo',
+    manifests: [
+      { url: () => `https://api.github.com/repos/${REPO}/contents/updates/latest.json?ref=main`, headers: { Accept: 'application/vnd.github.raw+json', 'X-GitHub-Api-Version': '2022-11-28' } },
+      { url: () => `${RAW}/latest.json?t=${Date.now()}` }
+    ],
+    asset: (v, f) => `${RAW}/${encodeURIComponent(f)}` },
+  { name: 'releases', manifests: [{ url: () => `https://github.com/${REPO}/releases/latest/download/latest.json` }], asset: (v, f) => `https://github.com/${REPO}/releases/download/v${v}/${encodeURIComponent(f)}` }
 ];
 const EVERY_MS = 6 * 3600e3;
 
@@ -57,8 +65,8 @@ let busy = false, installerPath = null, timer = null, pending = null, declinedVe
 
 function set(patch) { status = { ...status, ...patch }; send('update:status', status); }
 
-async function getJson(url) {
-  const r = await net.fetch(url, { headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(15000) });
+async function getJson(url, headers) {
+  const r = await net.fetch(url, { headers: { 'Cache-Control': 'no-cache', ...(headers || {}) }, signal: AbortSignal.timeout(15000) });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return JSON.parse(await r.text());
@@ -77,8 +85,14 @@ function validManifest(m) {
 // Newest valid latest.json across the sources, or null when nothing has been published anywhere.
 async function latest() {
   const res = await Promise.allSettled(SOURCES.map(async (src) => {
-    const raw = await getJson(src.manifest());
-    return raw ? { m: validManifest(raw), src } : null;
+    let lastErr = null;
+    for (const man of src.manifests) {
+      try {
+        const raw = await getJson(man.url(), man.headers);
+        return raw ? { m: validManifest(raw), src } : null;
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
   }));
   const found = res.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
   if (!found.length) { const bad = res.find(r => r.status === 'rejected'); if (bad) throw bad.reason; return null; }
