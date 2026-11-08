@@ -1,5 +1,5 @@
 'use strict';
-// The Incinerator: updates from GitHub.
+// Incinerator: updates from GitHub.
 //
 // The app checks every time it opens and every 6 hours while it runs, and it never updates without asking:
 // when a newer version is out, the player asks UPDATE NOW / NOT NOW. Nothing is downloaded until the answer is yes,

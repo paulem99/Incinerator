@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
-<title>The Incinerator: one-time setup</title>
+<title>Incinerator: one-time setup</title>
 <style>
   :root { --bg: #140b0b; --panel: #1d1212; --line: #4a2626; --text: #eadcd5; --muted: #a8948c; --red: #d44444; --red-dk: #8f1d22; --steel: #8a929c; }
   * { box-sizing: border-box; }
@@ -47,7 +47,7 @@
   <section id="intro" class="on">
     <h2>Apple Music needs one quick step</h2>
     <p>Apple Music only plays inside apps signed by <b>castLabs</b>, the company that makes its copy-protection plug-in. Signing is free, but it needs a castLabs account.</p>
-    <p>Make one here and The Incinerator signs itself. You only do this once.</p>
+    <p>Make one here and Incinerator signs itself. You only do this once.</p>
     <div class="btns">
       <button class="p" data-go="create">Create a free account</button>
       <button class="s" data-go="login">I already have a castLabs account</button>
@@ -64,7 +64,7 @@
     </div>
     <label>Username<input id="c-user" autocomplete="username" spellcheck="false"></label>
     <label>Password<input id="c-pass" type="password" autocomplete="new-password"></label>
-    <p class="note">At least 8 characters, with upper and lower case letters and a number. Your password goes to castLabs only. The Incinerator doesn't save it.</p>
+    <p class="note">At least 8 characters, with upper and lower case letters and a number. Your password goes to castLabs only. Incinerator doesn't save it.</p>
     <div class="err" id="c-err" role="alert"></div>
     <div class="btns"><button class="p" id="c-go">Create account</button><button class="s" data-go="intro">Back</button></div>
   </section>
@@ -87,7 +87,7 @@
   </section>
 
   <section id="signing">
-    <h2>Signing The Incinerator</h2>
+    <h2>Signing Incinerator</h2>
     <p>This sends the app to castLabs and gets the signature back. It usually takes a minute or two, depending on your upload speed.</p>
     <div class="burn"><i></i></div>
     <div class="log" id="s-log">Starting…</div>
@@ -97,13 +97,13 @@
 
   <section id="done">
     <h2>Signed</h2>
-    <p>The Incinerator will restart now, and Apple Music will be ready in the SONGS drawer.</p>
+    <p>Incinerator will restart now, and Apple Music will be ready in the SONGS drawer.</p>
     <div class="btns"><button class="p" id="d-go">Restart now</button></div>
   </section>
 
   <section id="notool">
     <h2>The signing tool is missing</h2>
-    <p>This copy of The Incinerator doesn't include the castLabs signing tool, so it can't set up Apple Music. Reinstall it from the setup file.</p>
+    <p>This copy of Incinerator doesn't include the castLabs signing tool, so it can't set up Apple Music. Reinstall it from the setup file.</p>
     <div class="btns"><button class="s" id="n-go">Close</button></div>
   </section>
 </main>

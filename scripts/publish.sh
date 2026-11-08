@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ships the version in updates/ by pushing it to GitHub (main). Every installed copy of The Incinerator sees it
+# Ships the version in updates/ by pushing it to GitHub (main). Every installed copy of Incinerator sees it
 # the next time it opens (or within 6 hours) and asks its player before installing.
 #
 # RULE: only run this after the owner has said yes, in the chat, to sending this exact version.

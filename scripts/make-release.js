@@ -39,12 +39,12 @@ fs.writeFileSync(path.join(UPD, 'latest.json'), JSON.stringify(manifest, null, 2
 console.log(`${pkg.version} ready in updates/ (not published): ${pak.file} ${pak.size} bytes`);
 
 if (full) {
-  const src = path.join(ROOT, 'out', 'The Incinerator Setup.exe');
-  if (!fs.existsSync(src)) throw new Error('out/The Incinerator Setup.exe is missing: run scripts/build-installer.sh first');
+  const src = path.join(ROOT, 'out', 'Incinerator Setup.exe');
+  if (!fs.existsSync(src)) throw new Error('out/Incinerator Setup.exe is missing: run scripts/build-installer.sh first');
   const dir = path.join(ROOT, 'out', `release-${pkg.version}`);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const file = 'The.Incinerator.Setup.exe', buf = fs.readFileSync(src);
+  const file = 'Incinerator.Setup.exe', buf = fs.readFileSync(src);
   fs.writeFileSync(path.join(dir, file), buf);
   fs.copyFileSync(path.join(UPD, pakName), path.join(dir, pakName));
   const rel = { ...manifest, installer: { file, size: buf.length, sha256: crypto.createHash('sha256').update(buf).digest('hex') } };

@@ -1,4 +1,4 @@
-; The Incinerator: per-user Windows installer (no admin rights needed).
+; Incinerator: per-user Windows installer (no admin rights needed).
 ; Built on Linux by scripts/build-installer.sh, which passes VERSION, SHELLVER, SRC, OUTFILE and ICO.
 Unicode true
 SetCompressor /SOLID lzma
@@ -20,7 +20,10 @@ SetCompressorDictSize 64
   !error "pass -DICO=<icon.ico>"
 !endif
 
-!define APPNAME "The Incinerator"
+!define APPNAME "Incinerator"
+; The app used to be "The Incinerator". The exe, install folder and registry key keep that name so the
+; castLabs signature, settings and earlier installs carry over; only what people see is renamed.
+!define OLDNAME "The Incinerator"
 !define APPKEY "TheIncinerator"
 !define EXE "The Incinerator.exe"
 !define UNINST "Uninstall The Incinerator.exe"
@@ -28,7 +31,7 @@ SetCompressorDictSize 64
 
 Name "${APPNAME}"
 OutFile "${OUTFILE}"
-InstallDir "$LOCALAPPDATA\Programs\The Incinerator"
+InstallDir "$LOCALAPPDATA\Programs\${OLDNAME}"
 RequestExecutionLevel user
 BrandingText "${APPNAME} ${VERSION}"
 VIProductVersion "${VERSION}.0"
@@ -42,10 +45,10 @@ VIAddVersionKey "LegalCopyright" " "
 !define MUI_ICON "${ICO}"
 !define MUI_UNICON "${ICO}"
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TITLE "The Incinerator"
-!define MUI_WELCOMEPAGE_TEXT "This installs The Incinerator on this PC, with shortcuts on your desktop and in the Start menu.$\r$\n$\r$\nNo admin rights needed. Click Install to continue."
+!define MUI_WELCOMEPAGE_TITLE "${APPNAME}"
+!define MUI_WELCOMEPAGE_TEXT "This installs ${APPNAME} on this PC, with shortcuts on your desktop and in the Start menu.$\r$\n$\r$\nNo admin rights needed. Click Install to continue."
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${EXE}"
-!define MUI_FINISHPAGE_RUN_TEXT "Open The Incinerator"
+!define MUI_FINISHPAGE_RUN_TEXT "Open ${APPNAME}"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -91,6 +94,8 @@ Section "Install"
   sigDone:
 
   WriteUninstaller "$INSTDIR\${UNINST}"
+  Delete "$DESKTOP\${OLDNAME}.lnk"
+  Delete "$SMPROGRAMS\${OLDNAME}.lnk"
   CreateShortCut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\${EXE}" "" "$INSTDIR\resources\app\assets\icon.ico" 0
   CreateShortCut "$SMPROGRAMS\${APPNAME}.lnk" "$INSTDIR\${EXE}" "" "$INSTDIR\resources\app\assets\icon.ico" 0
   WriteRegStr HKCU "${REGKEY}" "DisplayName" "${APPNAME}"
@@ -113,6 +118,8 @@ Section "Uninstall"
   Sleep 800
   Delete "$DESKTOP\${APPNAME}.lnk"
   Delete "$SMPROGRAMS\${APPNAME}.lnk"
+  Delete "$DESKTOP\${OLDNAME}.lnk"
+  Delete "$SMPROGRAMS\${OLDNAME}.lnk"
   RMDir /r "$INSTDIR"
   DeleteRegKey HKCU "${REGKEY}"
 SectionEnd

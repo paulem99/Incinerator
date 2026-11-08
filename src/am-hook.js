@@ -1,4 +1,4 @@
-// Injected into music.apple.com (page world). Drives Apple's own MusicKit player for The Incinerator.
+// Injected into music.apple.com (page world). Drives Apple's own MusicKit player for Incinerator.
 (function () {
   if (window.__incinHook) return true;
   window.__incinHook = true;

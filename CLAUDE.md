@@ -1,4 +1,4 @@
-# The Incinerator
+# Incinerator
 
 A morgue-themed pixel-art music player for Windows (Electron). It plays local MP3s and the owner's Apple Music
 library, through Apple's web player in a hidden window. The owner designs it and Claude writes the code. Build
@@ -16,6 +16,18 @@ way.
 
 Before you push anything, tell the owner what changed and which version it is, and ask. Local commits and local
 builds are fine without asking.
+
+## Name
+
+The app is called **Incinerator** (it was "The Incinerator" up to 0.2.1). Some internal names stay "The Incinerator" on
+purpose, so existing installs keep working:
+
+- `productName` in package.json, which sets the AppData folder and the Windows taskbar ID. boot.js also pins
+  userData to `%APPDATA%\The Incinerator`.
+- The exe and its `.sig`, the install folder, and the `TheIncinerator` uninstall registry key.
+
+Everything people see says Incinerator: window titles, shortcuts, the installer, and the Apps & features entry.
+`renameShortcuts()` in main.js renames old shortcuts once.
 
 ## Layout
 

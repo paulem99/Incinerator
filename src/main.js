@@ -1,5 +1,5 @@
 'use strict';
-// The Incinerator: main process.
+// Incinerator: main process.
 // Two windows: the pixel player you see, and a hidden Apple Music web player it drives.
 
 const { app, BrowserWindow, components, ipcMain, dialog, protocol, net, session, screen, shell, desktopCapturer, nativeImage, globalShortcut } = require('electron');
@@ -7,11 +7,15 @@ const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const { Readable } = require('stream');
+const { execFile } = require('child_process');
 const signing = require('./signing');
 const updater = require('./updater');
 const VERSION = updater.VERSION;
 
-const APP_NAME = 'The Incinerator';
+const APP_NAME = 'Incinerator';
+// The app used to be called "The Incinerator". Its AppData folder, exe and install folder keep that name so
+// settings, the Apple Music sign-in and the castLabs signature carry over.
+const OLD_NAME = 'The Incinerator';
 const BASE_W = 300, BASE_H = 268;
 const AM_URL = 'https://music.apple.com/';
 const AM_PARTITION = 'persist:applemusic';
@@ -315,6 +319,30 @@ function wireIpc() {
   });
 }
 
+// v0.2.2 rename: turn the old "The Incinerator" shortcuts and the Apps & features entry into "Incinerator". Runs once.
+function renameShortcuts() {
+  if (process.platform !== 'win32' || settings.renamedTo === APP_NAME) return;
+  const me = path.resolve(process.execPath).toLowerCase();
+  const dirs = [app.getPath('desktop'), path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')];
+  for (const d of dirs) {
+    const oldLnk = path.join(d, OLD_NAME + '.lnk'), newLnk = path.join(d, APP_NAME + '.lnk');
+    try {
+      if (!fs.existsSync(oldLnk)) continue;
+      const det = shell.readShortcutLink(oldLnk);
+      if (!det.target || path.resolve(det.target).toLowerCase() !== me) continue;   // only shortcuts to this app
+      if (!fs.existsSync(newLnk)) shell.writeShortcutLink(newLnk, 'create', det);
+      fs.unlinkSync(oldLnk);
+      log('rename', `${oldLnk} -> ${newLnk}`);
+    } catch (e) { log('rename', 'shortcut: ' + e.message); }
+  }
+  const KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TheIncinerator';
+  execFile('reg', ['query', KEY], { windowsHide: true }, (err) => {
+    if (err) return;   // not installed by the installer (a dev run): leave the registry alone
+    for (const v of ['DisplayName', 'Publisher']) execFile('reg', ['add', KEY, '/v', v, '/t', 'REG_SZ', '/d', APP_NAME, '/f'], { windowsHide: true }, (e) => { if (e) log('rename', 'registry: ' + e.message); });
+  });
+  settings.renamedTo = APP_NAME; saveSettings();
+}
+
 function registerMediaKeys() {
   const map = { MediaPlayPause: 'toggle', MediaNextTrack: 'next', MediaPreviousTrack: 'prev', MediaStop: 'stop' };
   for (const [k, a] of Object.entries(map)) { try { globalShortcut.register(k, () => send('media-key', a)); } catch {} }
@@ -335,6 +363,7 @@ if (single) app.whenReady().then(async () => {
   updater.init({ log, send, getSettings: () => settings, onQuit: (relaunch) => { quitting = true; if (relaunch) app.relaunch(); app.quit(); } });
   createPlayer();
   registerMediaKeys();
+  renameShortcuts();
   const unsigned = signing.needsSigning();
   log('start', `v${VERSION} electron ${process.versions.electron} signed=${!unsigned} scale=${settings.scale} folder=${settings.folder ? 'yes' : 'no'}`);
   if (unsigned) {

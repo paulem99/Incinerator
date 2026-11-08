@@ -1,5 +1,5 @@
 'use strict';
-// The Incinerator: startup loader.
+// Incinerator: startup loader.
 // Runs the newest verified copy of the app: a downloaded update in the user's AppData, or the copy the
 // installer shipped. An update that fails to start three times is set aside, and the copy before it runs instead.
 
@@ -7,7 +7,10 @@ const { app } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-app.setName('The Incinerator');
+// The app is called "Incinerator" now, but settings, the Apple Music sign-in and updates stay in the AppData
+// folder it has always used.
+app.setPath('userData', path.join(app.getPath('appData'), 'The Incinerator'));
+app.setName('Incinerator');
 const SHIPPED = require('./package.json').version;
 
 function cmp(a, b) {

@@ -62,7 +62,7 @@ function openSetup(parent, settings, saveSettings) {
   if (setupWin && !setupWin.isDestroyed()) { setupWin.show(); setupWin.focus(); return; }
   setupWin = new BrowserWindow({
     width: 480, height: 660, useContentSize: true, frame: false, resizable: false, maximizable: false, fullscreenable: false,
-    parent, modal: false, show: false, backgroundColor: '#140b0b', title: 'The Incinerator: one-time setup',
+    parent, modal: false, show: false, backgroundColor: '#140b0b', title: 'Incinerator: one-time setup',
     webPreferences: { preload: path.join(__dirname, 'preload-setup.js'), contextIsolation: true, sandbox: true }
   });
   setupWin.loadFile(path.join(__dirname, 'setup', 'setup.html'), { query: { tool: toolAvailable() ? '1' : '0' } });

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds "out/The Incinerator Setup.exe" (a per-user Windows installer) on Linux. Nothing else to install on the PC:
+# Builds "out/Incinerator Setup.exe" (a per-user Windows installer) on Linux. Nothing else to install on the PC:
 # it carries castLabs Electron (Widevine), the app, and a portable Python with castlabs-evs for one-time VMP signing.
 #
 #   bash scripts/build-installer.sh
@@ -68,6 +68,6 @@ SHELLVER_FILE=$(cat "$BUILD/version")
 # 5. Installer.
 [ -n "$NSISDIR_ARG" ] && export NSISDIR="$NSISDIR_ARG"
 "$MAKENSIS" -V2 \
-  -DVERSION="$VER" -DSHELLVER="$SHELLVER_FILE" -DSRC="$BUILD" -DOUTFILE="$ROOT/out/The Incinerator Setup.exe" -DICO="$ROOT/assets/icon.ico" \
+  -DVERSION="$VER" -DSHELLVER="$SHELLVER_FILE" -DSRC="$BUILD" -DOUTFILE="$ROOT/out/Incinerator Setup.exe" -DICO="$ROOT/assets/icon.ico" \
   installer.nsi
-ls -l "$ROOT/out/The Incinerator Setup.exe"
+ls -l "$ROOT/out/Incinerator Setup.exe"

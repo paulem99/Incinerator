@@ -1,5 +1,5 @@
 'use strict';
-// The Incinerator: pixel player renderer. Everything is drawn into a 300x268 pixel buffer.
+// Incinerator: pixel player renderer. Everything is drawn into a 300x268 pixel buffer.
 const API = window.incin;
 const OW = 300, OH = 268;
 const cv = document.getElementById('c'), cx = cv.getContext('2d'), img = cx.createImageData(OW, OH), B = img.data;
