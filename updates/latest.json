@@ -1,11 +1,11 @@
 {
-  "version": "0.2.4",
-  "date": "2026-11-08T07:35:57.621Z",
-  "notes": "Apple Music sign-in sticks now, and your library loads. Update checks see new versions right away.",
+  "version": "0.2.5",
+  "date": "2026-11-08T07:59:00.697Z",
+  "notes": "Separate drawers: APPLE (top) and MP3S (second). Skull jumps into the incinerator while a song plays and freaks out as you turn it up. Gear is easier to spot.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.4.pak",
-    "size": 331436,
-    "sha256": "042f603f4be61d91608a864c6513afc1a4ae2b821c5e5b23fdff8dd2136516ac"
+    "file": "incinerator-app-0.2.5.pak",
+    "size": 335284,
+    "sha256": "0287d73bfc144e5a5de167a2a59b1af47ff28ddecfa9c2f111afb8939b6de356"
   }
 }

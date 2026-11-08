@@ -105,7 +105,7 @@ function drawBez(v) { for (const [i, c] of bez) { const x = i % OW, y = (i / OW)
 
 // ---------- morgue drawers ----------
 const INK = [40, 16, 14], PAPER = () => [214 - (R() * 14 | 0), 208 - (R() * 14 | 0), 190 - (R() * 14 | 0)];
-function makeFront(label, withTag, seed) {
+function makeFront(label, tagText, seed) {
   const a = new Array(DRW * DRH), set = (x, y, c) => { if (x >= 0 && x < DRW && y >= 0 && y < DRH) a[y * DRW + x] = c; };
   for (let y = 0; y < DRH; y++) for (let x = 0; x < DRW; x++) { let c; if (y === 0 || x === 0) c = [214, 220, 228]; else if (y === DRH - 1 || x === DRW - 1) c = [24, 26, 30]; else { const v = rowO[(y + seed * 7) % OH] * 0.6 + R() * 0.4; c = STEEL[Math.min(2, v * 3 | 0)]; if (rn(x + DRX0 + seed * 13, y + 120) > 0.76) c = R() < 0.5 ? P.r2 : P.r1; } set(x, y, c); }
   [[3, 3], [DRW - 4, 3], [3, DRH - 4], [DRW - 4, DRH - 4]].forEach(([x, y]) => bolt(set, x, y, 0));
@@ -114,16 +114,16 @@ function makeFront(label, withTag, seed) {
   if (seed === 0 || seed === 3) for (let x = 72; x < 86; x++) for (let y = 6; y < 10; y++) if (R() < 0.55) set(x, y, BL[R() < 0.5 ? 1 : 2]);
   for (let y = 2; y < 14; y++) for (let x = 8; x < 51; x++) { const e = y === 2 || y === 13 || x === 8 || x === 50; set(x, y, e ? [60, 64, 70] : PAPER()); }
   if (label) bt((x, y, c) => { if (x >= 9 && x < 50 && y >= 3 && y < 13) set(x, y, c); }, label, 9 + ((41 - bw(label, 1)) >> 1), 3, 1, INK);
-  if (withTag) {
+  if (tagText) {
     for (let y = 2; y < 14; y++) for (let x = 120; x < 164; x++) { const corner = (x < 123 && (y < 2 + (123 - x) || y > 13 - (123 - x))); if (corner) continue; set(x, y, (y === 2 || y === 13 || x === 163) ? [120, 108, 80] : [198, 186, 150]); }
     set(124, 7, [30, 26, 20]); set(124, 8, [30, 26, 20]);
     for (let x = 114; x < 124; x++) set(x, 7 + ((x & 1)), [160, 150, 120]);
-    bt((x, y, c) => { if (x >= 126 && x < 163 && y >= 3 && y < 13) set(x, y, c); }, '+ MP3S', 127, 3, 1, INK);
+    bt((x, y, c) => { if (x >= 126 && x < 163 && y >= 3 && y < 13) set(x, y, c); }, tagText, 126 + ((37 - bw(tagText, 1)) >> 1), 3, 1, INK);
   }
   return a;
 }
-const drF = makeFront('SONGS', true, 0);
-const decoF = DECO.map((_, i) => makeFront('0' + (i + 2), false, i + 1));
+const frontF = { 1: makeFront('APPLE', null, 0), 2: makeFront('MP3S', 'FOLDER', 1) };
+const decoF = DECO.slice(1).map((_, i) => makeFront('0' + (i + 3), null, i + 2));
 const shT = new Array(SHW * TRAYH);
 for (let y = 0; y < TRAYH; y++) for (let x = 0; x < SHW; x++) { const n = (R() - 0.5) * 14, f = (x === 54 || x === 108) ? 0.88 : (x === 55 || x === 109) ? 1.05 : (y === 52 ? 0.9 : 1), g = 1 - 0.12 * (y / TRAYH); shT[y * SHW + x] = [(204 + n) * f * g, (200 + n) * f * g, (188 + n) * f * g]; }
 [[20, 70, 5], [130, 30, 4], [80, 90, 3], [150, 80, 3]].forEach(([x0, y0, r]) => { for (let y = -r - 1; y <= r + 1; y++) for (let x = -r - 1; x <= r + 1; x++) { const d = Math.hypot(x, y) + (R() - 0.5) * 1.8, X = x0 + x, Y = y0 + y; if (d < r && X >= 0 && X < SHW && Y >= 0 && Y < TRAYH) shT[Y * SHW + X] = d < r * 0.4 ? [150, 72, 64] : [178, 122, 112]; } });
@@ -196,20 +196,30 @@ function winButtons() {
 let setOpen = false, introOn = true, slDrag = null;
 const GX0 = 11, GY0 = 11;
 function gear() {
-  const L = [], hv = hover === 'gear' || setOpen;
-  for (let a = 0; a < 64; a++) { const an = a / 64 * Math.PI * 2; L.push([Math.round(GX0 + Math.cos(an) * 5.4), Math.round(GY0 + Math.sin(an) * 5.4), a % 3 ? [118, 120, 124] : [84, 86, 90]]); }
-  for (let a = 0; a < 48; a++) { const an = a / 48 * Math.PI * 2, r = 3.9 + Math.sin(a * 1.6) * 0.8; L.push([Math.round(GX0 + Math.cos(an) * r), Math.round(GY0 + Math.sin(an) * r), a % 4 === 0 ? P.r2 : [96, 98, 102]]); }
-  for (let k = 0; k < 8; k++) { const an = k / 8 * Math.PI * 2 + 0.2, bx = GX0 + Math.cos(an) * 7.6, by = GY0 + Math.sin(an) * 7.6; for (const [dx, dy] of [[-1, -1], [1, 1], [1, -1], [-1, 1], [0, 0]]) L.push([Math.round(bx + dx), Math.round(by + dy), (dx || dy) ? [150, 152, 156] : [196, 198, 202]]); }
-  for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]) L.push([GX0 + dx, GY0 + dy, [176, 178, 182]]);
-  const seen = new Set(); for (const [x, y] of L) { const k = y * OW + x; if (!seen.has(k)) { seen.add(k); shade(x + 1, y + 1, 0.55); } }
+  const L = [], hv = hover === 'gear' || setOpen, K = [6, 5, 5];
+  // Black backing plate with a drop shadow so the gear stands out on the tiles.
+  for (let y = -8; y <= 8; y++) for (let x = -8; x <= 8; x++) { const d = Math.hypot(x, y); if (d <= 7.4 && d > 6.4) shade(GX0 + x + 1, GY0 + y + 1, 0.55); }
+  for (let y = -7; y <= 7; y++) for (let x = -7; x <= 7; x++) { const d = Math.hypot(x, y); if (d <= 6.9) oput(GX0 + x, GY0 + y, d > 6.1 ? [0, 0, 0] : [18, 12, 12]); }
+  for (let a = 0; a < 64; a++) { const an = a / 64 * Math.PI * 2; L.push([Math.round(GX0 + Math.cos(an) * 5.4), Math.round(GY0 + Math.sin(an) * 5.4), a % 3 ? [150, 152, 158] : [104, 106, 112]]); }
+  for (let a = 0; a < 48; a++) { const an = a / 48 * Math.PI * 2, r = 3.9 + Math.sin(a * 1.6) * 0.8; L.push([Math.round(GX0 + Math.cos(an) * r), Math.round(GY0 + Math.sin(an) * r), a % 4 === 0 ? P.r2 : [120, 122, 128]]); }
+  // Barbs: steel crosses with black outlines.
+  const barbs = [];
+  for (let k = 0; k < 8; k++) { const an = k / 8 * Math.PI * 2 + 0.2, bx = Math.round(GX0 + Math.cos(an) * 7.6), by = Math.round(GY0 + Math.sin(an) * 7.6); barbs.push([bx, by]); }
+  for (const [bx, by] of barbs) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (Math.abs(dx) + Math.abs(dy) <= 3) oput(bx + dx, by + dy, K);
+  for (const [bx, by] of barbs) for (const [dx, dy] of [[-1, -1], [1, 1], [1, -1], [-1, 1], [0, 0]]) L.push([bx + dx, by + dy, (dx || dy) ? [170, 172, 178] : [214, 216, 222]]);
+  for (const [dx, dy] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) L.push([GX0 + dx, GY0 + dy, K]);
+  L.push([GX0, GY0, [196, 198, 204]]);
   for (const [x, y, c] of L) oput(x, y, hv ? [Math.min(255, c[0] * 0.6 + 120), c[1] * 0.45, c[2] * 0.45] : c);
+  // The word, stencilled in black next to it.
+  const tx = GX0 + 11, ty = GY0 - 3, ink = hv ? [150, 18, 18] : [8, 6, 6];
+  bt(oput, 'SETTINGS', tx, ty, 1, ink, { sh: hv ? [40, 4, 4] : [122, 26, 24] });
   if (upd && (upd.state === 'available' || upd.state === 'declined')) {
     // A fresh drop of blood under the gear: an update is out (and waits for a yes).
-    const k = 0.5 + 0.5 * Math.sin(performance.now() / 1000 * Math.PI * 2 * 1.2), dc = [150 + 100 * k, 18 + 40 * k, 18 + 30 * k], dx = GX0 - 2, dy = GY0 + 9, DROP = [[1, 0], [1, 1], [0, 2], [1, 2], [2, 2], [0, 3], [1, 3], [2, 3], [1, 4]];
+    const k = 0.5 + 0.5 * Math.sin(performance.now() / 1000 * Math.PI * 2 * 1.2), dc = [150 + 100 * k, 18 + 40 * k, 18 + 30 * k], dx = GX0 - 2, dy = GY0 + 10, DROP = [[1, 0], [1, 1], [0, 2], [1, 2], [2, 2], [0, 3], [1, 3], [2, 3], [1, 4]];
     for (const [a, b] of DROP) shade(dx + a + 1, dy + b + 1, 0.5);
     for (const [a, b] of DROP) oput(dx + a, dy + b, (a === 0 && b === 2) ? [255, 200, 200] : dc);
   }
-  hits.push({ id: 'gear', x: GX0 - 9, y: GY0 - 9, w: 19, h: 19 });
+  hits.push({ id: 'gear', x: GX0 - 9, y: GY0 - 9, w: 20 + bw('SETTINGS', 1) + 2, h: 19 });
 }
 const SETROWS = [
   { id: 'fps', label: 'FPS', min: 2, max: 60, get: () => fps, set: (v) => { fps = v; API.setSettings({ fps: v }); } },
@@ -302,15 +312,19 @@ const TOETAG = ["011110", "100001", "101101", "100001", "100001", "100001", "011
 let amReady = false, amAuth = false, amOffline = false, amUnsigned = false, amLoading = false, amCount = 0, amSongs = [], amRecent = [], cdmOk = true;
 let localFiles = [], localFolder = null, localScan = null;
 let lib = { songs: [], artists: [], albums: [], recent: [] };
+let libAM = lib, libLocal = lib;   // drawer 1 is Apple Music only, drawer 2 is the MP3 folder only
 const keyOf = (s) => norm(s).replace(/[^A-Z0-9]/g, '');
 const sameSong = (a, b) => !!(a && b && a.src === b.src && (a.src === 'am' ? a.id === b.id : a.path === b.path));
 const fmt = (s) => { s = Math.max(0, s || 0); const m = Math.floor(s / 60), ss = Math.floor(s % 60); return (m < 10 ? '0' : '') + m + ':' + (ss < 10 ? '0' : '') + ss; };
 const fmt2 = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
 const byText = (f) => (a, b) => { const x = f(a), y = f(b); return x < y ? -1 : x > y ? 1 : 0; };
 function rebuildLibrary() {
-  const songs = [];
-  for (const s of amSongs) songs.push({ src: 'am', id: s.id, catalogId: s.catalogId, title: s.title, artist: s.artist, album: s.album, year: s.year, duration: s.duration, art: s.art, track: s.track, disc: s.disc, addedRaw: s.added });
-  for (const f of localFiles) songs.push({ src: 'local', path: f.path, title: f.title, artist: f.artist, album: f.album, year: f.year, duration: f.duration, track: f.track, disc: f.disc, added: f.added });
+  libAM = buildLib(amSongs.map(s => ({ src: 'am', id: s.id, catalogId: s.catalogId, title: s.title, artist: s.artist, album: s.album, year: s.year, duration: s.duration, art: s.art, track: s.track, disc: s.disc, addedRaw: s.added })));
+  libLocal = buildLib(localFiles.map(f => ({ src: 'local', path: f.path, title: f.title, artist: f.artist, album: f.album, year: f.year, duration: f.duration, track: f.track, disc: f.disc, added: f.added })));
+  lib = drAct === 2 ? libLocal : libAM;
+  dirty();
+}
+function buildLib(songs) {
   for (const s of songs) { s.T = norm(s.title); s.A = norm(s.artist); s.L = norm(s.album); s.sortT = keyOf(s.title) || s.T; }
   songs.sort(byText(s => s.sortT));
   const am = new Map(), al = new Map();
@@ -335,8 +349,7 @@ function rebuildLibrary() {
     if (t) rec.push([t, s]);
   }
   rec.sort((a, b) => b[0] - a[0]);
-  lib = { songs, artists, albums, recent: rec.slice(0, 300).map(r => r[1]) };
-  dirty();
+  return { songs, artists, albums, recent: rec.slice(0, 300).map(r => r[1]) };
 }
 
 // ---------- playback ----------
@@ -349,7 +362,7 @@ const gain = () => Math.pow(vol / 100, 1.6);
 function applyVol() { audio.volume = Math.min(1, gain()); if (amReady) API.amCmd({ type: 'volume', value: gain() }); }
 function playList(list, i) { if (!list || !list.length) return; queue = list.slice(); qi = Math.max(0, Math.min(i, queue.length - 1)); startCur(); }
 function startCur() {
-  cur = queue[qi]; if (!cur) return;
+  cur = queue[qi]; if (!cur) return; stopped = false;
   pb.time = 0; pb.dur = cur.duration || 0; pb.playing = true;
   if (cur.src === 'local') {
     if (amActive) { API.amCmd({ type: 'pause' }); amActive = false; }
@@ -365,12 +378,12 @@ function startCur() {
 }
 function next() { if (!queue.length) return; if (qi + 1 >= queue.length) { stopAll(); return; } qi++; startCur(); }
 function prev() { if (!cur) return; if (pb.time > 3 || qi === 0) seek(0); else { qi--; startCur(); } }
-function stopAll() { if (cur && cur.src === 'local') audio.pause(); else if (amActive) API.amCmd({ type: 'pause' }); pb.playing = false; dirty(); }
+function stopAll() { if (cur && cur.src === 'local') audio.pause(); else if (amActive) API.amCmd({ type: 'pause' }); pb.playing = false; stopped = true; dirty(); }
 function toggle() {
   if (!cur) { const l = lib.songs; if (l.length) playList(l, 0); else openDrawer(true); return; }
   if (cur.src === 'local') { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }
   else API.amCmd({ type: pb.playing ? 'pause' : 'play' });
-  pb.playing = !pb.playing; dirty();
+  pb.playing = !pb.playing; if (pb.playing) stopped = false; dirty();
 }
 function seek(t) { if (!cur) return; t = Math.max(0, Math.min(t, (pb.dur || 0) - 0.25)); if (cur.src === 'local') audio.currentTime = t; else API.amCmd({ type: 'seek', time: t }); pb.time = t; dirty(); }
 audio.addEventListener('timeupdate', () => { if (cur && cur.src === 'local') pb.time = audio.currentTime; });
@@ -427,7 +440,12 @@ let hover = null, press = null, hits = [], hudOn = false, mode = 'art';
 function coverArt(x0, y0, t) {
   const d = artCache.get(artKey(t));
   if (d && d !== 'loading') { for (let y = 0; y < 50; y++) for (let x = 0; x < 50; x++) { const o = (y * 50 + x) * 4; sp(x0 + 1 + x, y0 + 1 + y, [d[o], d[o + 1], d[o + 2]]); } return; }
+  if (skullT > 0) { emptyBox(x0, y0); return; }   // he's in the incinerator (or on his way there)
   skullBox(x0, y0, performance.now() / 1000);
+}
+function emptyBox(x0, y0) {
+  for (let y = 0; y < 50; y++) for (let x = 0; x < 50; x++) { const n = (hsh(x, y, 7, 11) - 0.5) * 8; sp(x0 + 1 + x, y0 + 1 + y, [10 + n, 7 + n * 0.5, 7 + n * 0.5]); }
+  bt(sp, 'NO', x0 + 1 + ((50 - bw('NO', 1)) >> 1), y0 + 15, 1, SCD); bt(sp, 'COVER', x0 + 1 + ((50 - bw('COVER', 1)) >> 1), y0 + 26, 1, SCD);
 }
 // Floating skull for songs without cover art. Every so often its jaw drops and it laughs.
 const SKF = ["............4556553.............", ".........4555566655442..........", ".......44545565655543322........", "......4455556566655424432.......", "....34444555565655554233221.....", "...3445455556565655452433221....", "...4344545555556554544233322....", "..444455555565656554524333322...", ".33444454555555655454424332211..", ".34454555555656565545442433221..", ".43445455555555655454434332221..", "2344545555556565555454434332211.", "2334454545555555554544343322111.", "2344545555555565555454434332211.", "2334555656666555555555454432111.", "2344556566666565556555544442211.", "1334555222266555555522224432111.", ".23442111111256555211111123221..", ".23421100001125552110000112211..", ".23311000000125552100000011211..", ".23411000000125552100000011211..", ".2321100e0001245421000e0011111..", ".23321000001124542110000012111..", "4453211111112455542111111122321.", "3445332211224466643221122213221.", "4454433334445566655333212223322.", ".33433343545540004444423221211..", "..333343445541000144433222211...", "...3233334443100013334221211....", "....22333333333333333333211.....", "....23314161616161616141221.....", ".....331415151515151514121......", ".....231314141414141413111......"];
@@ -445,6 +463,85 @@ function skullBox(x0, y0, tn) {
   drawRows(SKF, sx, sy);
   drawRows(SKJ, sx, sy + SKJ_TOP + jawDrop);
   if (laugh >= 0) { const rise = Math.round(laugh * 10), col = laugh < 0.7 ? SCT : SC2; bt(sp, 'HA', x0 + 39, y0 + 12 - rise, 1, col, { sh: [20, 4, 4] }); if (laugh > 0.3) bt(sp, 'HA', x0 + 2, y0 + 20 - Math.round((laugh - 0.3) * 10), 1, laugh < 0.85 ? SC1 : SC2, { sh: [20, 4, 4] }); }
+}
+// ---------- the skull in the incinerator ----------
+// While a song is on, the skull sits in the fire behind the grate. The louder the volume, the hotter his eyes glow,
+// the wider his jaw hangs and the harder he shakes. With nothing on, he floats back to the cover spot.
+let skullT = 0, stopped = true;   // 0 = in the cover spot, 1 = in the incinerator
+const SK_S = 0.66, SK_EYES = [[15.5 - 6.7, 20.6], [15.5 + 6.7, 20.6]];
+function shrink(rows, s, eyes) {
+  const W1 = Math.round(rows[0].length * s), H1 = Math.round(rows.length * s), px = [];
+  for (let y = 0; y < H1; y++) for (let x = 0; x < W1; x++) {
+    let r = 0, g = 0, b = 0, n = 0, eye = 0, ed = 9;
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+      const sx = Math.floor((x + (i + 0.5) / 4) / s), sy = Math.floor((y + (j + 0.5) / 4) / s), ch = (rows[sy] || '')[sx];
+      if (!ch || ch === '.') continue;
+      const c = ch === 'e' ? [170, 30, 26] : SKP[ch]; r += c[0]; g += c[1]; b += c[2]; n++;
+      if (eyes) for (const [ex, ey] of eyes) { const d = Math.hypot((sx + 0.5 - ex) / 5.2, (sy + 0.5 - ey) / 4.6); if (d < 1 && (ch === 'e' || ch <= '1')) { eye++; ed = Math.min(ed, d); } }
+    }
+    if (n) px.push([x, y, [r / n, g / n, b / n], n / 16, eye / n, ed]);
+  }
+  return { w: W1, h: H1, px };
+}
+const SKS = { face: shrink(SKF, SK_S, SK_EYES), jaw: shrink(SKJ, SK_S, null), jawTop: Math.round(SKJ_TOP * SK_S) };
+// Lit from the fire below, with flames licking over him; the grate's bars stay in front.
+// vf: 0 at the top of the skull, 1 at the chin. Flames only lick over the lower half, so he stays visible when it's loud.
+function firePix(X, Y, c, a, vf, hot) {
+  const lx = X - CX0, ly = Y - CY0; if (lx < 0 || ly < 0 || lx >= FW || ly >= FH || lx % 8 >= 6) return;
+  const hv = heat[ly * FW + lx], h = hv / 36, f = FPAL[hv], fa = hot ? 0 : Math.max(0, Math.min(0.55, (h - 0.5) * 1.5)) * Math.max(0, vf * 1.6 - 0.5);
+  const lit = hot ? c : [c[0] * (0.7 + 0.16 * h) + 30 * h, c[1] * (0.56 + 0.12 * h) + 10 * h, c[2] * 0.46 + 4 * h];
+  const o = (Y * OW + X) * 4;
+  for (let k = 0; k < 3; k++) { const v = lit[k] * (1 - fa) + f[k] * fa; B[o + k] = B[o + k] * (1 - a) + v * a; }
+}
+function incSkull(tn) {
+  const g = vol / 100, F = SKS.face;
+  const bob = Math.sin(tn * (1.6 + g * 2.6)) * 1.6, amp = g * g * 2.4, fr = Math.floor(tn * 24);
+  const jx = Math.round((hsh(fr, 3, 1, 7) - 0.5) * 2 * amp), jy = Math.round((hsh(fr, 5, 2, 9) - 0.5) * 2 * amp);
+  const ox = CX0 + ((FW - F.w) >> 1) + jx, oy = Math.round(CY0 + 7 + bob) + jy;
+  let drop = Math.round(g * 5); if (g > 0.6 && Math.floor(tn * 13) % 2) drop = Math.max(1, drop - 2);   // a screaming chatter when it's loud
+  const glow = 0.1 + 0.9 * g * (0.85 + 0.15 * Math.sin(tn * 9.3));
+  const H = SKS.jawTop + drop + SKS.jaw.h;
+  // A charred shadow behind him so he reads against even the hottest fire.
+  const sh = 0.35 + 0.45 * g;
+  for (const [dx, dy] of [[1, 1], [-1, 1], [0, 2]]) {
+    for (const [x, y, , a] of SKS.jaw.px) firePix(ox + x + dx, oy + SKS.jawTop + drop + y + dy, [26, 10, 6], a * sh, 0, true);
+    for (const [x, y, , a] of F.px) firePix(ox + x + dx, oy + y + dy, [26, 10, 6], a * sh, 0, true);
+  }
+  for (const [x, y, c, a] of SKS.jaw.px) firePix(ox + x, oy + SKS.jawTop + drop + y, c, Math.min(1, a * 1.15), (SKS.jawTop + drop + y) / H, false);
+  for (const [x, y, c, a, eye, ed] of F.px) {
+    // Eyes: the socket stays black, and a red core burns in the middle. It grows and goes white-hot as it gets louder.
+    let col = c, hot = false;
+    if (eye > 0) {
+      const core = 0.3 + 0.45 * g;
+      if (ed < core) { const k = 1 - ed / core, wh = Math.max(0, k - 0.55) * 2 * g; col = [120 + 135 * glow, 10 + 20 * glow + 170 * wh * glow, 8 + 12 * glow + 150 * wh * glow]; hot = glow > 0.2; }
+      else col = [c[0] * 0.5, c[1] * 0.4, c[2] * 0.4];
+    }
+    firePix(ox + x, oy + y, col, Math.min(1, a * 1.15), y / H, hot);
+  }
+  // red halo around the eyes, stronger as it gets louder
+  for (const [ex, ey] of SK_EYES) {
+    const cx = ox + ex * SK_S, cy = oy + ey * SK_S, R0 = 2 + 3.5 * g;
+    for (let y = Math.floor(cy - R0); y <= cy + R0; y++) for (let x = Math.floor(cx - R0); x <= cx + R0; x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / R0, lx = x - CX0, ly = y - CY0;
+      if (d >= 1 || lx < 0 || ly < 0 || lx >= FW || ly >= FH || lx % 8 >= 6) continue;
+      const k = (1 - d) * (1 - d) * glow * 0.9, o = (y * OW + x) * 4;
+      B[o] = Math.min(255, B[o] + 255 * k); B[o + 1] = Math.min(255, B[o + 1] + 30 * k); B[o + 2] = Math.min(255, B[o + 2] + 20 * k);
+    }
+  }
+}
+// On the way between the cover spot and the incinerator: a quick hop, shrinking as he goes.
+function skullFlight(tn) {
+  const t = skullT, e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2, sc = 1 + (SK_S - 1) * e;
+  const ax = SX + 4 + 1 + 9 + 16, ay = SY + 16 + 1 + 2 + 20, bx = CX0 + FW / 2, by = CY0 + 7 + 18;
+  const cx = ax + (bx - ax) * e, cy = ay + (by - ay) * e - Math.sin(Math.PI * e) * 26, w = 32 * sc, h = 41 * sc, x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h / 2);
+  const eye = [200, 30, 26];
+  for (let y = 0; y < Math.round(h); y++) for (let x = 0; x < Math.round(w); x++) {
+    const sx = Math.floor(x / sc), sy = Math.floor(y / sc);
+    let ch = sy < SKJ_TOP ? (SKF[sy] || '')[sx] : null;
+    if (sy >= SKJ_TOP) { const jr = SKJ[sy - SKJ_TOP]; ch = jr ? jr[sx] : null; if ((!ch || ch === '.') && sy < SKF.length) ch = (SKF[sy] || '')[sx]; }
+    if (!ch || ch === '.') continue;
+    oput(x0 + x, y0 + y, ch === 'e' ? eye : SKP[ch]);
+  }
 }
 function visBox(x0, y0, tn) { for (let y = 1; y < 51; y++) for (let x = 1; x < 51; x++) sp(x0 + x, y0 + y, y % 2 ? SCB1 : SCB2); const bs = bands(10, tn), base = y0 + 51; for (let k = 0; k < 10; k++) { const h = Math.max(1, Math.round(bs[k] * 48)), x1 = x0 + 1 + k * 5; for (let y = base - h; y < base; y++) for (let x = x1; x < x1 + 4; x++) sp(x, y, y === base - h ? SCT : (y % 2 ? SC2 : SC1)); } }
 function btnBase(id, x, y, w, h) { const hv = hover === id, pd = press === id; for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const e = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1; if (e) sp(xx, yy, hv || pd ? SCT : SC2); else if (pd) sp(xx, yy, SC1); } hits.push({ id, x: SX + x, y: SY + y, w, h }); return pd ? SCB1 : (hv ? SCT : SC1); }
@@ -476,7 +573,7 @@ function screen(q, tn) { if (q >= 1 && updAsk && upd && upd.latest) { updateScre
 const TABS = ['ARTISTS', 'ALBUMS', 'SONGS', 'RECENT'];
 let searchQ = null, searchCache = { q: null, lib: null, res: [] };
 const MAG = ["0111000", "1000100", "1000100", "1000100", "0111100", "0000110", "0000011"];
-function startSearch() { searchQ = ''; scroll = 0; view = null; if (!drOpen) openDrawer(true); dirty(); }
+function startSearch() { searchQ = ''; scroll = 0; view = null; if (!drWant) openDrawer(true); dirty(); }
 function endSearch() { searchQ = null; scroll = 0; dirty(); }
 function searchResults() {
   const q = norm(searchQ || '').trim();
@@ -494,11 +591,30 @@ function searchResults() {
   searchCache = { q, lib, res };
   return res;
 }
-let tab = 'SONGS', view = null, scroll = 0, drOpen = false, drT = 0, sbDrag = null;
+// Drawer 1 (top) holds Apple Music, drawer 2 the MP3 folder; 3-5 are for show. Only one drawer is out at a time.
+// The lower drawer has less room below it, so it slides out less and shows fewer rows.
+const DRAWERS = { 1: { slot: DRY, travel: TRAYH }, 2: { slot: DECO[0], travel: 241 - DECO[0] } };
+const rowsFor = (id) => Math.floor((DRAWERS[id].travel - 21) / RH);
+let tab = 'SONGS', view = null, scroll = 0, drT = 0, sbDrag = null;
+let drAct = 1, drOut = 0, drWant = 0;   // drawer whose lists are shown / drawer that is out (or sliding) / drawer wanted out
+const drStore = { 1: { tab: 'SONGS', view: null, scroll: 0 }, 2: { tab: 'SONGS', view: null, scroll: 0 } };
 const scrolls = {};
-function openDrawer(v) { if (drOpen === v) return; drOpen = v; if (!v) searchQ = null; drawerSfx(); dirty(); }
-function setTab(t) { scrolls[viewKey()] = scroll; tab = t; view = null; scroll = scrolls[viewKey()] || 0; API.setSettings({ tab }); dirty(); }
-function viewKey() { return tab + (view ? ':' + view.kind + ':' + view.key : ''); }
+function useDrawer(id) {
+  if (id === drAct) return;
+  drStore[drAct] = { tab, view, scroll };
+  drAct = id; ({ tab, view, scroll } = drStore[id]);
+  lib = id === 2 ? libLocal : libAM;
+  API.setSettings({ drawer: id });
+}
+// openDrawer(1|2) pulls that drawer out (closing the other first), openDrawer(0) closes, openDrawer(true) = the last one used.
+function openDrawer(id) {
+  if (id === true) id = drAct; if (id === false) id = 0;
+  if (drWant === id) return;
+  if (id) useDrawer(id);
+  drWant = id; if (!id) searchQ = null; drawerSfx(); dirty();
+}
+function setTab(t) { scrolls[viewKey()] = scroll; tab = t; view = null; scroll = scrolls[viewKey()] || 0; API.setSettings(drAct === 2 ? { tab2: t } : { tab: t }); dirty(); }
+function viewKey() { return drAct + ':' + tab + (view ? ':' + view.kind + ':' + view.key : ''); }
 function currentRows() {
   const rows = [];
   if (searchQ !== null) {
@@ -508,12 +624,14 @@ function currentRows() {
     res.forEach((s, i) => rows.push({ kind: 'song', s, list: res, i, label: s.T, right: fmt2(s.duration) }));
     return rows;
   }
-  if (!view) {
+  if (!view && drAct === 1) {
     if (amUnsigned) rows.push({ kind: 'action', label: 'SET UP APPLE MUSIC', act: 'setup' });
     else if (amOffline) rows.push({ kind: 'action', label: 'APPLE MUSIC OFFLINE - RETRY', act: 'retry' });
     else if (amReady && !amAuth) rows.push({ kind: 'action', label: cdmOk ? 'SIGN IN TO APPLE MUSIC' : 'APPLE MUSIC NOT AVAILABLE', act: 'signin' });
     else if (!amReady && performance.now() - bootAt > 20000) rows.push({ kind: 'action', label: 'OPEN APPLE MUSIC WINDOW', act: 'showam' });
     if (amLoading) rows.push({ kind: 'info', label: 'LOADING APPLE MUSIC ' + amCount });
+  }
+  if (!view && drAct === 2) {
     if (localScan) rows.push({ kind: 'info', label: 'READING MP3S ' + localScan.done + '/' + localScan.total });
     if (!localFolder) rows.push({ kind: 'action', label: '+ ADD YOUR MP3 FOLDER', act: 'folder' });
   }
@@ -525,7 +643,7 @@ function currentRows() {
   if (tab === 'ARTISTS') lib.artists.forEach(a => rows.push({ kind: 'artist', a, label: a.name, right: String(a.songs.length) }));
   else if (tab === 'ALBUMS') lib.albums.forEach(a => rows.push({ kind: 'album', a, label: a.name, right: a.year || '' }));
   else { const list = tab === 'SONGS' ? lib.songs : lib.recent; list.forEach((s, i) => rows.push({ kind: 'song', s, list, i, label: s.T, right: fmt2(s.duration) })); }
-  if (rows.length === 0) rows.push({ kind: 'info', label: tab === 'RECENT' ? 'NOTHING ADDED RECENTLY' : 'NO MUSIC YET' });
+  if (rows.length === 0) rows.push({ kind: 'info', label: tab === 'RECENT' ? 'NOTHING ADDED RECENTLY' : drAct === 2 ? 'NO MP3S YET' : 'NO SONGS YET' });
   return rows;
 }
 function rowAction(r) {
@@ -540,14 +658,19 @@ function rowAction(r) {
   else if (r.act === 'setup') API.openSetup();
   dirty();
 }
-async function pickFolder() { const f = await API.pickFolder(); if (f) { localFolder = f; localFiles = []; localScan = { done: 0, total: 0 }; rebuildLibrary(); toast('READING YOUR MP3S'); } }
+async function pickFolder() { const f = await API.pickFolder(); if (f) { openDrawer(2); localFolder = f; localFiles = []; localScan = { done: 0, total: 0 }; rebuildLibrary(); toast('READING YOUR MP3S'); } }
 function drawDrawer(v, live, tn) {
-  const e = drT < 0.5 ? 2 * drT * drT : 1 - Math.pow(-2 * drT + 2, 2) / 2, off = Math.round(e * TRAYH), fy = DRY + off, top = fy - TRAYH;
-  DECO.forEach((y, i) => { slot(y, v); drawFront(decoF[i], y, v); });
-  slot(DRY, v);
-  for (let y = DRY; y < fy; y++) for (let x = DRX0; x < DRX1; x++) { if (v && !v(orank(x, y))) continue; const lx = x - DRX0; let c; if (lx < 3 || lx >= DRW - 3) c = (lx === 0 || lx === DRW - 3) ? [196, 202, 210] : (lx === 2 || lx === DRW - 1) ? [40, 42, 48] : [136, 143, 152]; else c = shT[(y - top) * SHW + (lx - 3)]; oput(x, y, c); }
-  if (off > 2 && live) {
-    const clip = (x, y, c) => { if (y >= DRY && y < fy && x >= DRX0 + 3 && x < DRX1 - 3) oput(x, y, c); };
+  DECO.slice(1).forEach((y, i) => { slot(y, v); drawFront(decoF[i], y, v); });
+  drawOne(2, v, live, tn);   // drawer 1 is drawn last so its tray covers the drawers below it
+  drawOne(1, v, live, tn);
+}
+function drawOne(id, v, live, tn) {
+  const D = DRAWERS[id], TH = D.travel, NR = rowsFor(id), out = id === drOut, full = out && drT > 0.95;
+  const e = out ? (drT < 0.5 ? 2 * drT * drT : 1 - Math.pow(-2 * drT + 2, 2) / 2) : 0, off = Math.round(e * TH), fy = D.slot + off, top = fy - TH;
+  slot(D.slot, v);
+  for (let y = D.slot; y < fy; y++) for (let x = DRX0; x < DRX1; x++) { if (v && !v(orank(x, y))) continue; const lx = x - DRX0; let c; if (lx < 3 || lx >= DRW - 3) c = (lx === 0 || lx === DRW - 3) ? [196, 202, 210] : (lx === 2 || lx === DRW - 1) ? [40, 42, 48] : [136, 143, 152]; else c = shT[(y - top) * SHW + (lx - 3)]; oput(x, y, c); }
+  if (off > 2 && live && id === drAct) {
+    const clip = (x, y, c) => { if (y >= D.slot && y < fy && x >= DRX0 + 3 && x < DRX1 - 3) oput(x, y, c); };
     // tabs, or the search line while searching
     const ws = TABS.map(t => bw(t, 1)), gap = Math.floor((SHW - 6 - ws.reduce((a, b) => a + b, 0)) / 3);
     let tx = DRX0 + 6; const ty = top + 2;
@@ -557,36 +680,35 @@ function drawDrawer(v, live, tn) {
       bt(clip, qs, sx, ty, 1, INK, { c0: qx, c1: qmax });
       if (Math.floor(performance.now() / 450) % 2 === 0) for (let y = ty; y < ty + 9; y++) { clip(Math.min(qmax - 2, sx + qw + 2), y, BL[2]); }
       const xh = hover === 'search-x'; bt(clip, 'X', DRX1 - 15, ty, 1, xh ? BL[3] : [110, 96, 86]);
-      if (drT > 0.95) hits.push({ id: 'search-x', x: DRX1 - 18, y: ty - 1, w: 12, h: 12 });
+      if (full) hits.push({ id: 'search-x', x: DRX1 - 18, y: ty - 1, w: 12, h: 12 });
       for (let x = qx; x < qmax; x++) clip(x, ty + 10, BL[2]);
-    } else TABS.forEach((t, i) => { const sel = t === tab && !view, hv = hover === 'tab' + t; bt(clip, t, tx, ty, 1, sel ? INK : hv ? [70, 50, 44] : [130, 120, 108]); if (t === tab) for (let x = tx - 1; x < tx + ws[i] + 1; x++) if (hsh(x, 3, 1, 1) > 0.15) { clip(x, ty + 10, BL[2]); if (hsh(x, 4, 1, 1) > 0.5) clip(x, ty + 11, BL[1]); } if (drT > 0.95) hits.push({ id: 'tab' + t, x: tx - 2, y: ty - 1, w: ws[i] + 4, h: 13 }); tx += ws[i] + gap; });
+    } else TABS.forEach((t, i) => { const sel = t === tab && !view, hv = hover === 'tab' + t; bt(clip, t, tx, ty, 1, sel ? INK : hv ? [70, 50, 44] : [130, 120, 108]); if (t === tab) for (let x = tx - 1; x < tx + ws[i] + 1; x++) if (hsh(x, 3, 1, 1) > 0.15) { clip(x, ty + 10, BL[2]); if (hsh(x, 4, 1, 1) > 0.5) clip(x, ty + 11, BL[1]); } if (full) hits.push({ id: 'tab' + t, x: tx - 2, y: ty - 1, w: ws[i] + 4, h: 13 }); tx += ws[i] + gap; });
     for (let x = DRX0 + 4; x < DRX1 - 4; x++) if (hsh(x, 9, 9, 1) > 0.3) clip(x, top + 14, [120, 106, 96]);
-    const rows = currentRows(), maxScroll = Math.max(0, rows.length - ROWS); scroll = Math.max(0, Math.min(scroll, maxScroll));
+    const rows = currentRows(), maxScroll = Math.max(0, rows.length - NR); scroll = Math.max(0, Math.min(scroll, maxScroll));
     const rightEdge = DRX1 - 8;
-    for (let r = 0; r < ROWS; r++) {
-      const idx = scroll + r; if (idx >= rows.length) break; const row = rows[idx], ry = top + 17 + r * RH; if (ry + 9 < DRY || ry >= fy) continue;
+    for (let r = 0; r < NR; r++) {
+      const idx = scroll + r; if (idx >= rows.length) break; const row = rows[idx], ry = top + 17 + r * RH; if (ry + 9 < D.slot || ry >= fy) continue;
       const isP = row.kind === 'song' && sameSong(row.s, cur), hv = hover === 'row' + idx;
       if (isP) for (let y = ry - 1; y < ry + 10; y++) for (let x = DRX0 + 4; x < DRX1 - 5; x++) if (hsh(x, y, 3, 1) > 0.25) clip(x, y, hsh(x, y, 4, 1) < 0.5 ? [178, 118, 108] : [190, 140, 128]);
       const ink = isP ? [120, 10, 10] : (row.kind === 'action' ? (hv ? BL[3] : [130, 20, 20]) : row.kind === 'info' ? [110, 100, 90] : hv ? [10, 4, 4] : [52, 24, 20]);
-      let lx = DRX0 + 6;
-      if (row.kind === 'song' && row.s.src === 'local') { patt(TOETAG, lx, ry + 1, [150, 120, 70], clip); lx += 8; }
+      const lx = DRX0 + 6;
       const rw = row.right ? bw(row.right, 1) : 0, rx = rightEdge - rw;
       if (row.kind === 'back' || row.kind === 'action' || row.kind === 'info') bt(clip, row.label, lx, ry, 1, ink, { c1: DRX1 - 6 });
       else marq(clip, row.label, lx, ry, rx - 5 - lx, ink, hv ? tn : 0);
       if (row.right) bt(clip, row.right, rx, ry, 1, ink);
       if (hv && !isP && row.kind !== 'info') for (let x = DRX0 + 6; x < DRX1 - 8; x += 2) clip(x, ry + 10, [90, 60, 54]);
-      if (drT > 0.95 && row.kind !== 'info') hits.push({ id: 'row' + idx, x: DRX0 + 3, y: ry - 1, w: DRW - 10, h: RH, row });
+      if (full && row.kind !== 'info') hits.push({ id: 'row' + idx, x: DRX0 + 3, y: ry - 1, w: DRW - 10, h: RH, row });
     }
     // scrollbar on the right rail
-    if (rows.length > ROWS && drT > 0.95) {
-      const trackY = top + 16, trackH = TRAYH - 18, th = Math.max(6, Math.round(trackH * ROWS / rows.length)), ty2 = trackY + Math.round((trackH - th) * (scroll / maxScroll));
+    if (rows.length > NR && full) {
+      const trackY = top + 16, trackH = TH - 18, th = Math.max(6, Math.round(trackH * NR / rows.length)), ty2 = trackY + Math.round((trackH - th) * (scroll / maxScroll));
       for (let y = trackY; y < trackY + trackH; y++) clip(DRX1 - 5, y, [150, 140, 128]);
       for (let y = ty2; y < ty2 + th; y++) { clip(DRX1 - 6, y, BL[2]); clip(DRX1 - 5, y, BL[3]); clip(DRX1 - 4, y, BL[1]); }
       hits.push({ id: 'sbar', x: DRX1 - 8, y: trackY, w: 6, h: trackH, trackY, trackH, th, maxScroll });
     }
   }
-  drawFront(drF, fy, v);
-  if (live) { hits.push({ id: 'drawer', x: DRX0, y: fy, w: DRW, h: DRH }); hits.push({ id: 'mp3s', x: DRX0 + 118, y: fy + 1, w: 47, h: 14 }); }
+  drawFront(frontF[id], fy, v);
+  if (live) { hits.push({ id: 'drawer' + id, x: DRX0, y: fy, w: DRW, h: DRH }); if (id === 2) hits.push({ id: 'mp3s', x: DRX0 + 118, y: fy + 1, w: 47, h: 14 }); }
 }
 
 // ---------- sound ----------
@@ -640,7 +762,9 @@ function frame(now) {
   const dt = Math.min(0.25, (now - pnow) / 1000); pnow = now;
   const raw = (now - st) / 1000; hudOn = raw >= T.scr[1];
   if (hudOn && !introDone) { introDone = true; startLoopback(); if (pendingToast) { toast(pendingToast, 8000); pendingToast = null; } }
-  const tg = drOpen ? 1 : 0; if (drT !== tg) { drT = Math.max(0, Math.min(1, drT + Math.sign(tg - drT) * dt * 2.2)); }
+  { const want = (cur && !stopped) ? 1 : 0; if (skullT !== want) skullT = Math.max(0, Math.min(1, skullT + Math.sign(want - skullT) * dt / 0.8)); }
+  if (drOut !== drWant) { if (drOut && drT > 0) drT = Math.max(0, drT - dt * 2.6); else { drOut = drWant; drT = 0; } }
+  else if (drOut && drT < 1) drT = Math.min(1, drT + dt * 2.2);
   const fi = Math.floor(raw * fps);
   if (fi !== last) {
     last = fi; fl++; const t = fi / fps; let ob = 0; hits = []; clearAll();
@@ -655,7 +779,7 @@ function frame(now) {
     else if (t < T.bez[0]) { }
     else if (t < T.bez[1]) { const p = pr(t, T.bez), v = r => r < p; drawTile(v); drawInc(v); drawDrawer(v, false, 0); drawBez(v); ob = v; }
     else if (t < T.scr[0]) { drawTile(); drawInc(); drawDrawer(null, false, 0); drawBez(); ob = 1; }
-    else { const tn = now / 1000; drawTile(); drawInc(); drawDrawer(null, true, tn); drawBez(); screen(pr(t, T.scr), tn); ob = 1; }
+    else { const tn = now / 1000; drawTile(); drawInc(); if (skullT >= 1) incSkull(tn); drawDrawer(null, true, tn); drawBez(); screen(pr(t, T.scr), tn); if (skullT > 0 && skullT < 1) skullFlight(tn); ob = 1; }
     if (ob) { const v = ob === 1 ? null : ob; drawWire(v); if (ob === 1) bugs(t); drawBarbs(v); if (ob === 1) firelight(); }
     if (hudOn) { winButtons(); gear(); }
     cx.putImageData(img, 0, 0);
@@ -667,7 +791,7 @@ function frame(now) {
 const toPix = (e) => { const r = cv.getBoundingClientRect(); return [Math.floor((e.clientX - r.left) / r.width * OW), Math.floor((e.clientY - r.top) / r.height * OH)]; };
 const hitAt = (x, y) => { for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h) return h; } return null; };
 const inInc = (x, y) => (x >= IX0 && x < IX1 && y >= IY0 && y < IY1) || (x >= FLX0 && x < FLX1 && y >= 8 && y < IY0);
-const inTray = (x, y) => drT > 0.95 && x >= DRX0 && x < DRX1 && y >= DRY && y < DRY + TRAYH;
+const inTray = (x, y) => drOut && drT > 0.95 && x >= DRX0 && x < DRX1 && y >= DRAWERS[drOut].slot && y < DRAWERS[drOut].slot + DRAWERS[drOut].travel;
 let volSave = null;
 function setVol(n) { vol = Math.max(0, Math.min(100, Math.round(n))); applyVol(); clearTimeout(volSave); volSave = setTimeout(() => API.setSettings({ vol }), 400); dirty(); }
 function seekToX(x) { const f = Math.min(1, Math.max(0, (x - (SX + 4)) / 149)); seek(f * (pb.dur || 0)); }
@@ -676,7 +800,7 @@ function act(h) {
   const id = h.id;
   if (id === 'play') toggle(); else if (id === 'prev') prev(); else if (id === 'next') next();
   else if (id === 'tog') { mode = mode === 'art' ? 'vis' : 'art'; API.setSettings({ mode }); }
-  else if (id === 'drawer') openDrawer(!drOpen);
+  else if (id === 'drawer1' || id === 'drawer2') { const n = id === 'drawer1' ? 1 : 2; openDrawer(drWant === n ? 0 : n); }
   else if (id === 'mp3s') pickFolder();
   else if (id === 'min') API.minimize(); else if (id === 'close') API.close();
   else if (id === 'gear') setOpen = !setOpen;
@@ -749,13 +873,15 @@ window.addEventListener('keydown', (e) => {
     case ' ': e.preventDefault(); toggle(); break;
     case 'ArrowRight': seek(pb.time + 5); break;
     case 'ArrowLeft': seek(pb.time - 5); break;
-    case 'ArrowUp': if (drOpen) { scroll = Math.max(0, scroll - 1); dirty(); } else setVol(vol + 5); break;
-    case 'ArrowDown': if (drOpen) { scroll++; dirty(); } else setVol(vol - 5); break;
-    case 'PageUp': scroll = Math.max(0, scroll - ROWS); dirty(); break;
-    case 'PageDown': scroll += ROWS; dirty(); break;
+    case 'ArrowUp': if (drWant) { scroll = Math.max(0, scroll - 1); dirty(); } else setVol(vol + 5); break;
+    case 'ArrowDown': if (drWant) { scroll++; dirty(); } else setVol(vol - 5); break;
+    case 'PageUp': scroll = Math.max(0, scroll - rowsFor(drAct)); dirty(); break;
+    case 'PageDown': scroll += rowsFor(drAct); dirty(); break;
     case 'n': case 'N': next(); break;
     case 'p': case 'P': prev(); break;
-    case 'd': case 'D': openDrawer(!drOpen); break;
+    case 'd': case 'D': openDrawer(drWant ? 0 : drAct); break;
+    case '1': openDrawer(drWant === 1 ? 0 : 1); break;
+    case '2': openDrawer(drWant === 2 ? 0 : 2); break;
     case 'Escape': if (setOpen) { setOpen = false; dirty(); } else if (view) { view = null; dirty(); } else openDrawer(false); break;
     case '+': case '=': setVol(vol + 5); break;
     case '-': setVol(vol - 5); break;
@@ -802,7 +928,8 @@ API.onLocalError((e) => { localScan = null; toast("COULDN'T READ THAT FOLDER"); 
   try {
     const s = await API.getSettings();
     vol = Number.isFinite(s.vol) ? s.vol : 60; fps = Math.max(2, Math.min(60, s.fps || 60)); sfxCrunch = (s.crunch ?? 70) / 100; sfxStatic = (s.static ?? 70) / 100; fxVolume = Number.isFinite(s.fxVolume) ? Math.max(0, Math.min(100, s.fxVolume)) : 35;
-    if (TABS.includes(s.tab)) tab = s.tab; if (s.mode === 'vis' || s.mode === 'art') mode = s.mode;
+    if (TABS.includes(s.tab)) tab = drStore[1].tab = s.tab; if (TABS.includes(s.tab2)) drStore[2].tab = s.tab2; if (s.mode === 'vis' || s.mode === 'art') mode = s.mode;
+    if (s.drawer === 2) useDrawer(2);
     introOn = s.intro !== false;
     if (s.intro === false) st = performance.now() - T.scr[1] * 1000;
     const l = await API.getLocal(); localFolder = l.folder; localFiles = l.files || []; rebuildLibrary();
