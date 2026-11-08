@@ -1,7 +1,6 @@
 # Incinerator
 
-A pixel-art music player for Windows set in a morgue. It has a rusted steel door intro, a barbed-wire border,
-a morgue-drawer song list, and an incinerator that burns hotter as you turn the volume up. It plays your MP3s
+A pixel-art music player for Windows set in a morgue. It has an incinerator that burns hotter as you turn the volume up. It plays your MP3s
 and your Apple Music library together in one list, and MP3s get a toe tag.
 
 ## Install
