@@ -1,0 +1,21 @@
+{
+  "name": "the-incinerator",
+  "productName": "The Incinerator",
+  "version": "0.2.0",
+  "description": "A morgue-themed pixel MP3 and Apple Music player",
+  "main": "boot.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "incinerator": {
+    "shell": "44.9.3",
+    "repo": "paulem99/the-incinerator"
+  },
+  "scripts": {
+    "pack": "node scripts/pack-app.js",
+    "installer": "bash scripts/build-installer.sh",
+    "release": "node scripts/make-release.js"
+  },
+  "dependencies": {
+    "music-metadata": "12.2.3"
+  }
+}
