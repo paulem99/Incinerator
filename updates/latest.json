@@ -1,11 +1,11 @@
 {
-  "version": "0.2.2",
-  "date": "2026-11-08T07:14:11.670Z",
-  "notes": "New name: Incinerator. Your shortcuts get renamed too.",
+  "version": "0.2.3",
+  "date": "2026-11-08T07:31:13.804Z",
+  "notes": "Fixes Apple Music 'Authorization failed': the Apple sign-in popup can open now.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.2.pak",
-    "size": 329572,
-    "sha256": "ce12110fb4b65f4c58648acf4d995a2c9f05021e15747cbf5b3acf1aedf78a59"
+    "file": "incinerator-app-0.2.3.pak",
+    "size": 330626,
+    "sha256": "be7f28fed12a25d541924fc2669b1c20ac30168f601c752bc130f5cef55dcf1d"
   }
 }

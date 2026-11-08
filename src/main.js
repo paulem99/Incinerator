@@ -211,23 +211,52 @@ function createPlayer() {
   });
 }
 
+// Apple's own sites (sign-in runs on idmsa.apple.com / authorize.music.apple.com, art on mzstatic.com).
+const APPLE_URL = /^https:\/\/([a-z0-9-]+\.)*(apple\.com|icloud\.com|mzstatic\.com|apple-cloudkit\.com|cdn-apple\.com)([\/?#:]|$)/i;
+const BLANK_URL = (u) => !u || u === 'about:blank';
+const short = (u) => String(u || '').split(/[?#]/)[0].slice(0, 120);   // logs never get query strings (tokens)
+const AM_PERMS = ['mediaKeySystem', 'media', 'notifications', 'clipboard-sanitized-write', 'fullscreen', 'storage-access', 'top-level-storage-access'];
+
+// Popups Apple opens for sign-in. MusicKit opens a blank window first and points it at Apple afterwards, so blank
+// popups are allowed; anything that then tries to leave Apple's sites opens in the normal browser instead.
+function applePopupHandler(ses) {
+  return ({ url }) => {
+    if (BLANK_URL(url) || APPLE_URL.test(url)) {
+      log('apple', 'popup allowed: ' + (short(url) || 'about:blank'));
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 520, height: 720, autoHideMenuBar: true, title: `${APP_NAME}: Apple sign-in`, webPreferences: { session: ses, contextIsolation: true, sandbox: true } } };
+    }
+    log('apple', 'popup sent to browser: ' + short(url));
+    shell.openExternal(url);
+    return { action: 'deny' };
+  };
+}
+function guardApplePopup(win, ses) {
+  const wc = win.webContents;
+  wc.setUserAgent(CHROME_UA);
+  wc.setWindowOpenHandler(applePopupHandler(ses));
+  wc.on('did-create-window', (child) => guardApplePopup(child, ses));
+  wc.on('will-navigate', (e, url) => { if (!BLANK_URL(url) && !APPLE_URL.test(url)) { e.preventDefault(); log('apple', 'popup left Apple, opened in browser: ' + short(url)); shell.openExternal(url); } });
+  wc.on('did-navigate', (_e, url) => log('apple', 'popup at ' + short(url)));
+  wc.on('did-fail-load', (_e, code, desc, url, isMain) => { if (isMain) log('apple', `popup load failed: ${desc} (${code}) ${short(url)}`); });
+  wc.on('console-message', (e) => { const l = e.level; if (l === 'error' || l === 3) log('apple-popup', String(e.message).slice(0, 300)); });
+  win.on('closed', () => log('apple', 'popup closed'));
+}
+
+let amConsoleLines = 0;
 function createAppleMusic() {
   const ses = session.fromPartition(AM_PARTITION);
   ses.setUserAgent(CHROME_UA);
-  ses.setPermissionRequestHandler((_wc, perm, cb) => cb(['mediaKeySystem', 'media', 'notifications', 'clipboard-sanitized-write', 'fullscreen'].includes(perm)));
+  ses.setPermissionRequestHandler((_wc, perm, cb) => { const ok = AM_PERMS.includes(perm); if (!ok) log('apple', 'permission refused: ' + perm); cb(ok); });
   amWin = new BrowserWindow({
     width: 1100, height: 760, show: false, title: `${APP_NAME}: Apple Music sign-in`, autoHideMenuBar: true,
     icon: fs.existsSync(ICON) ? nativeImage.createFromPath(ICON) : undefined,
     webPreferences: { preload: path.join(__dirname, 'preload-am.js'), contextIsolation: true, sandbox: true, session: ses, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' }
   });
   amWin.webContents.setUserAgent(CHROME_UA);
-  amWin.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https:\/\/([a-z0-9-]+\.)*(apple\.com|icloud\.com|mzstatic\.com)\//i.test(url)) {
-      return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, webPreferences: { session: ses } } };
-    }
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
+  amWin.webContents.setWindowOpenHandler(applePopupHandler(ses));
+  amWin.webContents.on('did-create-window', (child) => guardApplePopup(child, ses));
+  // Apple Music's own errors go to the log (capped), so a failed sign-in can be diagnosed.
+  amWin.webContents.on('console-message', (e) => { const l = e.level; if ((l === 'error' || l === 3) && amConsoleLines++ < 150) log('apple-console', String(e.message).slice(0, 300)); });
   const hook = fs.readFileSync(path.join(__dirname, 'am-hook.js'), 'utf8');
   const inject = () => { if (amWin && !amWin.isDestroyed()) amWin.webContents.executeJavaScript(hook, true).catch(e => send('am:evt', { type: 'error', where: 'inject', message: String(e) })); };
   amWin.webContents.on('did-finish-load', inject);
@@ -251,7 +280,7 @@ function wireIpc() {
     if (!amWin || amWin.isDestroyed()) return;
     amShownForSignIn = !!(opts && opts.signIn);
     amWin.show(); amWin.focus();
-    if (amShownForSignIn) amWin.webContents.send('am:cmd', { type: 'authorize' });
+    if (amShownForSignIn) startAppleSignIn();
   });
   ipcMain.on('am:reload', () => { if (amWin && !amWin.isDestroyed()) amWin.loadURL(AM_URL); });
 
@@ -341,6 +370,20 @@ function renameShortcuts() {
     for (const v of ['DisplayName', 'Publisher']) execFile('reg', ['add', KEY, '/v', v, '/t', 'REG_SZ', '/d', APP_NAME, '/f'], { windowsHide: true }, (e) => { if (e) log('rename', 'registry: ' + e.message); });
   });
   settings.renamedTo = APP_NAME; saveSettings();
+}
+
+// Starts Apple's sign-in as if the user clicked: MusicKit opens a popup, and popups need a user gesture.
+function startAppleSignIn() {
+  if (!amWin || amWin.isDestroyed()) return;
+  const js = `(async () => {
+    const mk = window.MusicKit && MusicKit.getInstance && MusicKit.getInstance();
+    if (!mk) return 'musickit not loaded yet';
+    if (mk.isAuthorized) return 'already signed in';
+    try { await mk.authorize(); return 'authorize finished, signed in: ' + mk.isAuthorized; }
+    catch (e) { return 'authorize failed: ' + String((e && (e.errorCode || e.message || e.name)) || e).slice(0, 200); }
+  })()`;
+  log('apple', 'sign-in started');
+  amWin.webContents.executeJavaScript(js, true).then((r) => log('apple', r)).catch((e) => log('apple', 'sign-in script failed: ' + String(e).slice(0, 200)));
 }
 
 function registerMediaKeys() {
