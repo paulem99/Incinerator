@@ -10,6 +10,7 @@ const { Readable } = require('stream');
 const { execFile } = require('child_process');
 const signing = require('./signing');
 const updater = require('./updater');
+const webplayer = require('./webplayer');
 const VERSION = updater.VERSION;
 
 const APP_NAME = 'Incinerator';
@@ -407,6 +408,10 @@ if (single) app.whenReady().then(async () => {
   createPlayer();
   registerMediaKeys();
   renameShortcuts();
+  // Music services through their own websites (SoundCloud; YouTube and Spotify come next).
+  webplayer.wireIpc(log);
+  const svcOpts = { log, send, chromeUA: CHROME_UA, appName: APP_NAME, icon: fs.existsSync(ICON) ? nativeImage.createFromPath(ICON) : undefined, isQuitting: () => quitting, getSetting: (k) => settings[k], setSetting: (p) => { Object.assign(settings, p); saveSettings(); } };
+  const svcs = [webplayer.makeService(require('./services/soundcloud'), svcOpts)];
   const unsigned = signing.needsSigning();
   log('start', `v${VERSION} electron ${process.versions.electron} signed=${!unsigned} scale=${settings.scale} folder=${settings.folder ? 'yes' : 'no'}`);
   if (unsigned) {
@@ -418,6 +423,7 @@ if (single) app.whenReady().then(async () => {
   try { await components.whenReady(); } catch (e) { cdmOk = false; send('am:evt', { type: 'error', where: 'widevine', message: String(e && e.message || e) }); }
   if (cdmOk) { const cs = (components.status && components.status()) || null; log('widevine', JSON.stringify(cs)); send('am:evt', { type: 'cdm', status: cs }); } else log('widevine', 'failed');
   if (!unsigned) createAppleMusic();
+  for (const s of svcs) s.start();
 });
 
 // Developer check: INCIN_SMOKE=<png path> saves a screenshot of the player and quits.
@@ -427,7 +433,7 @@ if (single && process.env.INCIN_SMOKE) {
     setTimeout(async () => {
       try {
         if (process.env.INCIN_SMOKE_JS && playerWin) await playerWin.webContents.executeJavaScript(process.env.INCIN_SMOKE_JS, true);
-        await new Promise(r => setTimeout(r, 2500));
+        await new Promise(r => setTimeout(r, Number(process.env.INCIN_SMOKE_DELAY) || 2500));
         const shot = await playerWin.webContents.capturePage();
         fs.writeFileSync(process.env.INCIN_SMOKE, shot.toPNG());
         if (process.env.INCIN_SMOKE_SETUP_JS) {

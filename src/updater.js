@@ -23,7 +23,7 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 const { spawn } = require('child_process');
 
-const REPO = 'paulem99/the-incinerator';
+const REPO = 'paulem99/Incinerator';
 const VERSION = require('../package.json').version;
 const SHELL = String(process.versions.electron || '').split('+')[0];
 

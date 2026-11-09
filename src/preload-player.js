@@ -32,5 +32,8 @@ contextBridge.exposeInMainWorld('incin', {
   updateCheck: () => ipcRenderer.send('update:check'),
   updateInstall: () => ipcRenderer.send('update:install'),
   updateDecline: () => ipcRenderer.send('update:decline'),
-  onUpdate: on('update:status')
+  onUpdate: on('update:status'),
+  svcCmd: (svc, msg) => ipcRenderer.send('svc:cmd', svc, msg),
+  onSvc: on('svc:evt'),
+  svcPlaylist: (svc, id) => ipcRenderer.invoke('svc:playlist', svc, id)
 });

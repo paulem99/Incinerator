@@ -1,11 +1,11 @@
 {
-  "version": "0.2.5",
-  "date": "2026-11-08T07:59:00.697Z",
-  "notes": "Separate drawers: APPLE (top) and MP3S (second). Skull jumps into the incinerator while a song plays and freaks out as you turn it up. Gear is easier to spot.",
+  "version": "0.2.6",
+  "date": "2026-11-10T00:03:41.032Z",
+  "notes": "SoundCloud drawer: sign in once and play your likes, playlists and albums. MP3s moved to drawer 3.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.5.pak",
-    "size": 335284,
-    "sha256": "0287d73bfc144e5a5de167a2a59b1af47ff28ddecfa9c2f111afb8939b6de356"
+    "file": "incinerator-app-0.2.6.pak",
+    "size": 344511,
+    "sha256": "050e82ae0d0c031ff802106cbdc788e706de267052f6a69afcaeed12a48839a2"
   }
 }

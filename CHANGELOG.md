@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.6
+- **SoundCloud** drawer: sign in once and play your likes, playlists and albums
+- MP3s moved to drawer 3
+
 ## 0.2.5
 - Separate drawers: **APPLE** for Apple Music, **MP3S** for your music folder
 - The skull jumps into the incinerator while a song plays, and gets more freaked out the louder it is

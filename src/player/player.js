@@ -109,11 +109,13 @@ function makeFront(label, tagText, seed) {
   const a = new Array(DRW * DRH), set = (x, y, c) => { if (x >= 0 && x < DRW && y >= 0 && y < DRH) a[y * DRW + x] = c; };
   for (let y = 0; y < DRH; y++) for (let x = 0; x < DRW; x++) { let c; if (y === 0 || x === 0) c = [214, 220, 228]; else if (y === DRH - 1 || x === DRW - 1) c = [24, 26, 30]; else { const v = rowO[(y + seed * 7) % OH] * 0.6 + R() * 0.4; c = STEEL[Math.min(2, v * 3 | 0)]; if (rn(x + DRX0 + seed * 13, y + 120) > 0.76) c = R() < 0.5 ? P.r2 : P.r1; } set(x, y, c); }
   [[3, 3], [DRW - 4, 3], [3, DRH - 4], [DRW - 4, DRH - 4]].forEach(([x, y]) => bolt(set, x, y, 0));
-  for (let y = 4; y < 11; y++) { set(66, y, [70, 74, 80]); set(67, y, [50, 54, 60]); set(104, y, [70, 74, 80]); set(105, y, [50, 54, 60]); }
-  for (let x = 66; x < 106; x++) { set(x, 6, [214, 220, 228]); set(x, 7, [150, 156, 164]); set(x, 8, [44, 46, 52]); }
-  if (seed === 0 || seed === 3) for (let x = 72; x < 86; x++) for (let y = 6; y < 10; y++) if (R() < 0.55) set(x, y, BL[R() < 0.5 ? 1 : 2]);
-  for (let y = 2; y < 14; y++) for (let x = 8; x < 51; x++) { const e = y === 2 || y === 13 || x === 8 || x === 50; set(x, y, e ? [60, 64, 70] : PAPER()); }
-  if (label) bt((x, y, c) => { if (x >= 9 && x < 50 && y >= 3 && y < 13) set(x, y, c); }, label, 9 + ((41 - bw(label, 1)) >> 1), 3, 1, INK);
+  // The paper label grows to fit the word, and the handle moves right to make room.
+  const pw = Math.max(43, (label ? bw(label, 1) : 0) + 4), px1 = 8 + pw - 1, hx = Math.max(66, px1 + 8);
+  for (let y = 4; y < 11; y++) { set(hx, y, [70, 74, 80]); set(hx + 1, y, [50, 54, 60]); set(hx + 38, y, [70, 74, 80]); set(hx + 39, y, [50, 54, 60]); }
+  for (let x = hx; x < hx + 40; x++) { set(x, 6, [214, 220, 228]); set(x, 7, [150, 156, 164]); set(x, 8, [44, 46, 52]); }
+  if (seed === 0 || seed === 3) for (let x = hx + 6; x < hx + 20; x++) for (let y = 6; y < 10; y++) if (R() < 0.55) set(x, y, BL[R() < 0.5 ? 1 : 2]);
+  for (let y = 2; y < 14; y++) for (let x = 8; x <= px1; x++) { const e = y === 2 || y === 13 || x === 8 || x === px1; set(x, y, e ? [60, 64, 70] : PAPER()); }
+  if (label) bt((x, y, c) => { if (x >= 9 && x < px1 && y >= 3 && y < 13) set(x, y, c); }, label, 9 + ((pw - 2 - bw(label, 1)) >> 1), 3, 1, INK);
   if (tagText) {
     for (let y = 2; y < 14; y++) for (let x = 120; x < 164; x++) { const corner = (x < 123 && (y < 2 + (123 - x) || y > 13 - (123 - x))); if (corner) continue; set(x, y, (y === 2 || y === 13 || x === 163) ? [120, 108, 80] : [198, 186, 150]); }
     set(124, 7, [30, 26, 20]); set(124, 8, [30, 26, 20]);
@@ -122,8 +124,10 @@ function makeFront(label, tagText, seed) {
   }
   return a;
 }
-const frontF = { 1: makeFront('APPLE', null, 0), 2: makeFront('MP3S', 'FOLDER', 1) };
-const decoF = DECO.slice(1).map((_, i) => makeFront('0' + (i + 3), null, i + 2));
+// Drawers by what they hold: 1 Apple Music, 2 SoundCloud, 3 your MP3 folder; 4 and 5 are for show (for now).
+const DSRC = { 1: 'am', 2: 'sc', 3: 'local' };
+const frontF = { 1: makeFront('APPLE', null, 0), 2: makeFront('SOUNDCLOUD', null, 1), 3: makeFront('MP3S', 'FOLDER', 2) };
+const decoF = DECO.slice(2).map((_, i) => makeFront('0' + (i + 4), null, i + 3));
 const shT = new Array(SHW * TRAYH);
 for (let y = 0; y < TRAYH; y++) for (let x = 0; x < SHW; x++) { const n = (R() - 0.5) * 14, f = (x === 54 || x === 108) ? 0.88 : (x === 55 || x === 109) ? 1.05 : (y === 52 ? 0.9 : 1), g = 1 - 0.12 * (y / TRAYH); shT[y * SHW + x] = [(204 + n) * f * g, (200 + n) * f * g, (188 + n) * f * g]; }
 [[20, 70, 5], [130, 30, 4], [80, 90, 3], [150, 80, 3]].forEach(([x0, y0, r]) => { for (let y = -r - 1; y <= r + 1; y++) for (let x = -r - 1; x <= r + 1; x++) { const d = Math.hypot(x, y) + (R() - 0.5) * 1.8, X = x0 + x, Y = y0 + y; if (d < r && X >= 0 && X < SHW && Y >= 0 && Y < TRAYH) shT[Y * SHW + X] = d < r * 0.4 ? [150, 72, 64] : [178, 122, 112]; } });
@@ -312,18 +316,23 @@ const TOETAG = ["011110", "100001", "101101", "100001", "100001", "100001", "011
 let amReady = false, amAuth = false, amOffline = false, amUnsigned = false, amLoading = false, amCount = 0, amSongs = [], amRecent = [], cdmOk = true;
 let localFiles = [], localFolder = null, localScan = null;
 let lib = { songs: [], artists: [], albums: [], recent: [] };
-let libAM = lib, libLocal = lib;   // drawer 1 is Apple Music only, drawer 2 is the MP3 folder only
+const libs = { am: lib, sc: lib, local: lib };   // each drawer shows only its own library
+// Music services that run through their own website (src/webplayer.js); SoundCloud for now.
+const SVC = { sc: { name: 'SOUNDCLOUD', on: false, signedIn: null, loading: false, count: 0, songs: [], lists: [], albums: [], active: false, error: null } };
 const keyOf = (s) => norm(s).replace(/[^A-Z0-9]/g, '');
-const sameSong = (a, b) => !!(a && b && a.src === b.src && (a.src === 'am' ? a.id === b.id : a.path === b.path));
+const sameSong = (a, b) => !!(a && b && a.src === b.src && (a.src === 'local' ? a.path === b.path : a.id === b.id));
 const fmt = (s) => { s = Math.max(0, s || 0); const m = Math.floor(s / 60), ss = Math.floor(s % 60); return (m < 10 ? '0' : '') + m + ':' + (ss < 10 ? '0' : '') + ss; };
 const fmt2 = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
 const byText = (f) => (a, b) => { const x = f(a), y = f(b); return x < y ? -1 : x > y ? 1 : 0; };
 function rebuildLibrary() {
-  libAM = buildLib(amSongs.map(s => ({ src: 'am', id: s.id, catalogId: s.catalogId, title: s.title, artist: s.artist, album: s.album, year: s.year, duration: s.duration, art: s.art, track: s.track, disc: s.disc, addedRaw: s.added })));
-  libLocal = buildLib(localFiles.map(f => ({ src: 'local', path: f.path, title: f.title, artist: f.artist, album: f.album, year: f.year, duration: f.duration, track: f.track, disc: f.disc, added: f.added })));
-  lib = drAct === 2 ? libLocal : libAM;
+  libs.am = buildLib(amSongs.map(s => ({ src: 'am', id: s.id, catalogId: s.catalogId, title: s.title, artist: s.artist, album: s.album, year: s.year, duration: s.duration, art: s.art, track: s.track, disc: s.disc, addedRaw: s.added })));
+  libs.local = buildLib(localFiles.map(f => ({ src: 'local', path: f.path, title: f.title, artist: f.artist, album: f.album, year: f.year, duration: f.duration, track: f.track, disc: f.disc, added: f.added })));
+  // A service's SONGS tab keeps its own order (SoundCloud: newest like first).
+  for (const k in SVC) { const mapped = SVC[k].songs.map(t => svcSong(k, t)); libs[k] = buildLib(mapped.slice()); libs[k].likes = mapped; }
+  lib = libs[DSRC[drAct]];
   dirty();
 }
+const svcSong = (k, t) => ({ src: k, id: t.id, url: t.url, path: t.path, uri: t.uri, title: t.title, artist: t.artist, album: t.album, year: t.year, duration: t.duration, art: t.art, track: t.track || 0, disc: t.disc || 0, addedRaw: t.addedRaw || t.added || null });
 function buildLib(songs) {
   for (const s of songs) { s.T = norm(s.title); s.A = norm(s.artist); s.L = norm(s.album); s.sortT = keyOf(s.title) || s.T; }
   songs.sort(byText(s => s.sortT));
@@ -359,17 +368,27 @@ const pb = { playing: false, time: 0, dur: 0 };
 let toastMsg = null, toastUntil = 0;
 function toast(m, ms) { toastMsg = norm(m); toastUntil = performance.now() + (ms || 4000); dirty(); try { API.log && API.log('toast: ' + m); } catch { } }
 const gain = () => Math.pow(vol / 100, 1.6);
-function applyVol() { audio.volume = Math.min(1, gain()); if (amReady) API.amCmd({ type: 'volume', value: gain() }); }
+function applyVol() { audio.volume = Math.min(1, gain()); if (amReady) API.amCmd({ type: 'volume', value: gain() }); if (API.svcCmd) for (const k in SVC) if (SVC[k].on) API.svcCmd(k, { type: 'volume', value: gain() }); }
+// Only one thing plays at a time: stop every source except the one about to play.
+function quiet(src) {
+  if (src !== 'local' && audio.getAttribute('src')) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+  if (src !== 'am' && amActive) { API.amCmd({ type: 'pause' }); amActive = false; }
+  for (const k in SVC) if (src !== k && SVC[k].active) { API.svcCmd(k, { type: 'stop' }); SVC[k].active = false; }
+}
 function playList(list, i) { if (!list || !list.length) return; queue = list.slice(); qi = Math.max(0, Math.min(i, queue.length - 1)); startCur(); }
 function startCur() {
   cur = queue[qi]; if (!cur) return; stopped = false;
   pb.time = 0; pb.dur = cur.duration || 0; pb.playing = true;
+  quiet(cur.src);
   if (cur.src === 'local') {
-    if (amActive) { API.amCmd({ type: 'pause' }); amActive = false; }
     audio.src = API.fileUrl(cur.path); audio.currentTime = 0;
     audio.play().catch(() => toast("CAN'T PLAY THIS FILE"));
+  } else if (SVC[cur.src]) {
+    const sv = SVC[cur.src];
+    if (!sv.signedIn) { toast('SIGN IN TO ' + sv.name + ' FIRST'); pb.playing = false; return; }
+    sv.active = true;
+    API.svcCmd(cur.src, { type: 'play', track: { id: cur.id, url: cur.url, path: cur.path, uri: cur.uri, duration: cur.duration } });
   } else {
-    audio.pause(); audio.removeAttribute('src'); audio.load();
     if (!amAuth) { toast('SIGN IN TO APPLE MUSIC FIRST'); pb.playing = false; return; }
     amActive = true;
     API.amCmd({ type: 'playSong', id: cur.id, catalogId: cur.catalogId });
@@ -378,14 +397,15 @@ function startCur() {
 }
 function next() { if (!queue.length) return; if (qi + 1 >= queue.length) { stopAll(); return; } qi++; startCur(); }
 function prev() { if (!cur) return; if (pb.time > 3 || qi === 0) seek(0); else { qi--; startCur(); } }
-function stopAll() { if (cur && cur.src === 'local') audio.pause(); else if (amActive) API.amCmd({ type: 'pause' }); pb.playing = false; stopped = true; dirty(); }
+function stopAll() { if (cur && cur.src === 'local') audio.pause(); else if (cur && SVC[cur.src]) API.svcCmd(cur.src, { type: 'pause' }); else if (amActive) API.amCmd({ type: 'pause' }); pb.playing = false; stopped = true; dirty(); }
 function toggle() {
   if (!cur) { const l = lib.songs; if (l.length) playList(l, 0); else openDrawer(true); return; }
   if (cur.src === 'local') { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }
+  else if (SVC[cur.src]) API.svcCmd(cur.src, { type: pb.playing ? 'pause' : 'resume' });
   else API.amCmd({ type: pb.playing ? 'pause' : 'play' });
   pb.playing = !pb.playing; if (pb.playing) stopped = false; dirty();
 }
-function seek(t) { if (!cur) return; t = Math.max(0, Math.min(t, (pb.dur || 0) - 0.25)); if (cur.src === 'local') audio.currentTime = t; else API.amCmd({ type: 'seek', time: t }); pb.time = t; dirty(); }
+function seek(t) { if (!cur) return; t = Math.max(0, Math.min(t, (pb.dur || 0) - 0.25)); if (cur.src === 'local') audio.currentTime = t; else if (SVC[cur.src]) API.svcCmd(cur.src, { type: 'seek', time: t }); else API.amCmd({ type: 'seek', time: t }); pb.time = t; dirty(); }
 audio.addEventListener('timeupdate', () => { if (cur && cur.src === 'local') pb.time = audio.currentTime; });
 audio.addEventListener('durationchange', () => { if (cur && cur.src === 'local' && Number.isFinite(audio.duration)) pb.dur = audio.duration; });
 audio.addEventListener('play', () => { if (cur && cur.src === 'local') { pb.playing = true; dirty(); } });
@@ -593,27 +613,29 @@ function searchResults() {
 }
 // Drawer 1 (top) holds Apple Music, drawer 2 the MP3 folder; 3-5 are for show. Only one drawer is out at a time.
 // The lower drawer has less room below it, so it slides out less and shows fewer rows.
-const DRAWERS = { 1: { slot: DRY, travel: TRAYH }, 2: { slot: DECO[0], travel: 241 - DECO[0] } };
+const DRAWERS = { 1: { slot: DRY, travel: TRAYH }, 2: { slot: DECO[0], travel: 241 - DECO[0] }, 3: { slot: DECO[1], travel: 241 - DECO[1] } };
+const tabsFor = (id) => DSRC[id] === 'sc' ? ['ARTISTS', 'ALBUMS', 'SONGS', 'LISTS'] : TABS;
 const rowsFor = (id) => Math.floor((DRAWERS[id].travel - 21) / RH);
 let tab = 'SONGS', view = null, scroll = 0, drT = 0, sbDrag = null;
 let drAct = 1, drOut = 0, drWant = 0;   // drawer whose lists are shown / drawer that is out (or sliding) / drawer wanted out
-const drStore = { 1: { tab: 'SONGS', view: null, scroll: 0 }, 2: { tab: 'SONGS', view: null, scroll: 0 } };
+const drStore = { 1: { tab: 'SONGS', view: null, scroll: 0 }, 2: { tab: 'SONGS', view: null, scroll: 0 }, 3: { tab: 'SONGS', view: null, scroll: 0 } };
 const scrolls = {};
 function useDrawer(id) {
   if (id === drAct) return;
   drStore[drAct] = { tab, view, scroll };
   drAct = id; ({ tab, view, scroll } = drStore[id]);
-  lib = id === 2 ? libLocal : libAM;
-  API.setSettings({ drawer: id });
+  lib = libs[DSRC[id]];
+  API.setSettings({ drawerSrc: DSRC[id] });
 }
-// openDrawer(1|2) pulls that drawer out (closing the other first), openDrawer(0) closes, openDrawer(true) = the last one used.
+// openDrawer(1|2|3) pulls that drawer out (closing the other first), openDrawer(0) closes, openDrawer(true) = the last one used.
 function openDrawer(id) {
   if (id === true) id = drAct; if (id === false) id = 0;
   if (drWant === id) return;
   if (id) useDrawer(id);
   drWant = id; if (!id) searchQ = null; drawerSfx(); dirty();
 }
-function setTab(t) { scrolls[viewKey()] = scroll; tab = t; view = null; scroll = scrolls[viewKey()] || 0; API.setSettings(drAct === 2 ? { tab2: t } : { tab: t }); dirty(); }
+function setTab(t) { scrolls[viewKey()] = scroll; tab = t; view = null; scroll = scrolls[viewKey()] || 0; const tabs = Object.assign({}, savedTabs, { [DSRC[drAct]]: t }); savedTabs = tabs; API.setSettings({ tabs }); dirty(); }
+let savedTabs = {};
 function viewKey() { return drAct + ':' + tab + (view ? ':' + view.kind + ':' + view.key : ''); }
 function currentRows() {
   const rows = [];
@@ -624,26 +646,40 @@ function currentRows() {
     res.forEach((s, i) => rows.push({ kind: 'song', s, list: res, i, label: s.T, right: fmt2(s.duration) }));
     return rows;
   }
-  if (!view && drAct === 1) {
+  const src = DSRC[drAct], sv = SVC[src];
+  if (!view && src === 'am') {
     if (amUnsigned) rows.push({ kind: 'action', label: 'SET UP APPLE MUSIC', act: 'setup' });
     else if (amOffline) rows.push({ kind: 'action', label: 'APPLE MUSIC OFFLINE - RETRY', act: 'retry' });
     else if (amReady && !amAuth) rows.push({ kind: 'action', label: cdmOk ? 'SIGN IN TO APPLE MUSIC' : 'APPLE MUSIC NOT AVAILABLE', act: 'signin' });
     else if (!amReady && performance.now() - bootAt > 20000) rows.push({ kind: 'action', label: 'OPEN APPLE MUSIC WINDOW', act: 'showam' });
     if (amLoading) rows.push({ kind: 'info', label: 'LOADING APPLE MUSIC ' + amCount });
   }
-  if (!view && drAct === 2) {
+  if (!view && sv) {
+    if (amUnsigned) rows.push({ kind: 'action', label: 'SET UP ' + sv.name, act: 'setup' });
+    else if (sv.error === 'load') rows.push({ kind: 'action', label: sv.name + ' OFFLINE - RETRY', act: 'svcretry' });
+    else if (!sv.on || sv.signedIn === false) rows.push({ kind: 'action', label: 'SIGN IN TO ' + sv.name, act: 'svcsignin' });
+    else if (sv.signedIn === null) rows.push({ kind: 'info', label: 'CONNECTING TO ' + sv.name });
+    if (sv.loading) rows.push({ kind: 'info', label: 'LOADING ' + sv.name + ' ' + sv.count });
+    else if (sv.error === 'library') rows.push({ kind: 'action', label: "COULDN'T LOAD - TRY AGAIN", act: 'svclib' });
+  }
+  if (!view && src === 'local') {
     if (localScan) rows.push({ kind: 'info', label: 'READING MP3S ' + localScan.done + '/' + localScan.total });
     if (!localFolder) rows.push({ kind: 'action', label: '+ ADD YOUR MP3 FOLDER', act: 'folder' });
   }
   if (view) {
     rows.push({ kind: 'back', label: '< ' + view.title });
+    if (view.loading) rows.push({ kind: 'info', label: 'LOADING...' });
+    if (view.error) rows.push({ kind: 'info', label: "COULDN'T OPEN THIS LIST" });
     view.list.forEach((s, i) => rows.push({ kind: 'song', s, list: view.list, i, label: norm(s.title), right: fmt2(s.duration) }));
     return rows;
   }
   if (tab === 'ARTISTS') lib.artists.forEach(a => rows.push({ kind: 'artist', a, label: a.name, right: String(a.songs.length) }));
+  else if (tab === 'ALBUMS' && sv) sv.albums.forEach(p => rows.push({ kind: 'plist', p, label: norm(p.name), right: p.count ? String(p.count) : '' }));
   else if (tab === 'ALBUMS') lib.albums.forEach(a => rows.push({ kind: 'album', a, label: a.name, right: a.year || '' }));
+  else if (tab === 'LISTS') (sv ? sv.lists : []).forEach(p => rows.push({ kind: 'plist', p, label: norm(p.name), right: p.count ? String(p.count) : '' }));
+  else if (tab === 'SONGS' && sv && lib.likes) lib.likes.forEach((s, i) => rows.push({ kind: 'song', s, list: lib.likes, i, label: s.T, right: fmt2(s.duration) }));
   else { const list = tab === 'SONGS' ? lib.songs : lib.recent; list.forEach((s, i) => rows.push({ kind: 'song', s, list, i, label: s.T, right: fmt2(s.duration) })); }
-  if (rows.length === 0) rows.push({ kind: 'info', label: tab === 'RECENT' ? 'NOTHING ADDED RECENTLY' : drAct === 2 ? 'NO MP3S YET' : 'NO SONGS YET' });
+  if (rows.length === 0) rows.push({ kind: 'info', label: tab === 'RECENT' ? 'NOTHING ADDED RECENTLY' : tab === 'LISTS' ? 'NO PLAYLISTS YET' : tab === 'ALBUMS' && sv ? 'NO ALBUMS YET' : src === 'local' ? 'NO MP3S YET' : 'NO SONGS YET' });
   return rows;
 }
 function rowAction(r) {
@@ -651,6 +687,10 @@ function rowAction(r) {
   else if (r.kind === 'artist') { scrolls[viewKey()] = scroll; view = { kind: 'artist', key: r.a.name, title: r.a.name, list: r.a.songs }; scroll = 0; }
   else if (r.kind === 'album') { scrolls[viewKey()] = scroll; view = { kind: 'album', key: r.a.name + r.a.artist, title: r.a.name, list: r.a.songs }; scroll = 0; }
   else if (r.kind === 'back') { view = null; scroll = scrolls[viewKey()] || 0; }
+  else if (r.kind === 'plist') openList(DSRC[drAct], r.p);
+  else if (r.act === 'svcsignin') { SVC[DSRC[drAct]].on = true; API.svcCmd(DSRC[drAct], { type: 'signin' }); toast('SIGN IN IN THE ' + SVC[DSRC[drAct]].name + ' WINDOW'); }
+  else if (r.act === 'svcretry') { SVC[DSRC[drAct]].error = null; API.svcCmd(DSRC[drAct], { type: 'reload' }); }
+  else if (r.act === 'svclib') { SVC[DSRC[drAct]].error = null; API.svcCmd(DSRC[drAct], { type: 'library' }); }
   else if (r.act === 'signin') { if (cdmOk) API.showAppleMusic(true); else toast('WIDEVINE FAILED TO INSTALL. CHECK YOUR INTERNET'); }
   else if (r.act === 'folder') pickFolder();
   else if (r.act === 'retry') { amOffline = false; API.reloadAppleMusic(); toast('RECONNECTING TO APPLE MUSIC'); }
@@ -658,10 +698,18 @@ function rowAction(r) {
   else if (r.act === 'setup') API.openSetup();
   dirty();
 }
-async function pickFolder() { const f = await API.pickFolder(); if (f) { openDrawer(2); localFolder = f; localFiles = []; localScan = { done: 0, total: 0 }; rebuildLibrary(); toast('READING YOUR MP3S'); } }
+// Open one of a service's playlists in the drawer (its songs are fetched the first time).
+function openList(k, p) {
+  scrolls[viewKey()] = scroll;
+  const v = { kind: 'plist', key: k + ':' + p.id, title: norm(p.name), list: [], loading: true };
+  view = v; scroll = 0;
+  API.svcPlaylist(k, p.id).then((r) => { v.loading = false; if (r && r.songs) v.list = r.songs.map(t => { const x = svcSong(k, t); x.T = norm(x.title); x.A = norm(x.artist); x.L = norm(x.album); return x; }); else v.error = true; dirty(); });
+}
+async function pickFolder() { const f = await API.pickFolder(); if (f) { openDrawer(3); localFolder = f; localFiles = []; localScan = { done: 0, total: 0 }; rebuildLibrary(); toast('READING YOUR MP3S'); } }
 function drawDrawer(v, live, tn) {
-  DECO.slice(1).forEach((y, i) => { slot(y, v); drawFront(decoF[i], y, v); });
-  drawOne(2, v, live, tn);   // drawer 1 is drawn last so its tray covers the drawers below it
+  DECO.slice(2).forEach((y, i) => { slot(y, v); drawFront(decoF[i], y, v); });
+  drawOne(3, v, live, tn);   // drawn bottom-up so an open drawer's tray covers the drawers below it
+  drawOne(2, v, live, tn);
   drawOne(1, v, live, tn);
 }
 function drawOne(id, v, live, tn) {
@@ -672,7 +720,7 @@ function drawOne(id, v, live, tn) {
   if (off > 2 && live && id === drAct) {
     const clip = (x, y, c) => { if (y >= D.slot && y < fy && x >= DRX0 + 3 && x < DRX1 - 3) oput(x, y, c); };
     // tabs, or the search line while searching
-    const ws = TABS.map(t => bw(t, 1)), gap = Math.floor((SHW - 6 - ws.reduce((a, b) => a + b, 0)) / 3);
+    const TB = tabsFor(id), ws = TB.map(t => bw(t, 1)), gap = Math.floor((SHW - 6 - ws.reduce((a, b) => a + b, 0)) / 3);
     let tx = DRX0 + 6; const ty = top + 2;
     if (searchQ !== null) {
       patt(MAG, DRX0 + 6, ty + 1, INK, clip);
@@ -682,7 +730,7 @@ function drawOne(id, v, live, tn) {
       const xh = hover === 'search-x'; bt(clip, 'X', DRX1 - 15, ty, 1, xh ? BL[3] : [110, 96, 86]);
       if (full) hits.push({ id: 'search-x', x: DRX1 - 18, y: ty - 1, w: 12, h: 12 });
       for (let x = qx; x < qmax; x++) clip(x, ty + 10, BL[2]);
-    } else TABS.forEach((t, i) => { const sel = t === tab && !view, hv = hover === 'tab' + t; bt(clip, t, tx, ty, 1, sel ? INK : hv ? [70, 50, 44] : [130, 120, 108]); if (t === tab) for (let x = tx - 1; x < tx + ws[i] + 1; x++) if (hsh(x, 3, 1, 1) > 0.15) { clip(x, ty + 10, BL[2]); if (hsh(x, 4, 1, 1) > 0.5) clip(x, ty + 11, BL[1]); } if (full) hits.push({ id: 'tab' + t, x: tx - 2, y: ty - 1, w: ws[i] + 4, h: 13 }); tx += ws[i] + gap; });
+    } else TB.forEach((t, i) => { const sel = t === tab && !view, hv = hover === 'tab' + t; bt(clip, t, tx, ty, 1, sel ? INK : hv ? [70, 50, 44] : [130, 120, 108]); if (t === tab) for (let x = tx - 1; x < tx + ws[i] + 1; x++) if (hsh(x, 3, 1, 1) > 0.15) { clip(x, ty + 10, BL[2]); if (hsh(x, 4, 1, 1) > 0.5) clip(x, ty + 11, BL[1]); } if (full) hits.push({ id: 'tab' + t, x: tx - 2, y: ty - 1, w: ws[i] + 4, h: 13 }); tx += ws[i] + gap; });
     for (let x = DRX0 + 4; x < DRX1 - 4; x++) if (hsh(x, 9, 9, 1) > 0.3) clip(x, top + 14, [120, 106, 96]);
     const rows = currentRows(), maxScroll = Math.max(0, rows.length - NR); scroll = Math.max(0, Math.min(scroll, maxScroll));
     const rightEdge = DRX1 - 8;
@@ -708,7 +756,7 @@ function drawOne(id, v, live, tn) {
     }
   }
   drawFront(frontF[id], fy, v);
-  if (live) { hits.push({ id: 'drawer' + id, x: DRX0, y: fy, w: DRW, h: DRH }); if (id === 2) hits.push({ id: 'mp3s', x: DRX0 + 118, y: fy + 1, w: 47, h: 14 }); }
+  if (live) { hits.push({ id: 'drawer' + id, x: DRX0, y: fy, w: DRW, h: DRH }); if (DSRC[id] === 'local') hits.push({ id: 'mp3s', x: DRX0 + 118, y: fy + 1, w: 47, h: 14 }); }
 }
 
 // ---------- sound ----------
@@ -800,7 +848,7 @@ function act(h) {
   const id = h.id;
   if (id === 'play') toggle(); else if (id === 'prev') prev(); else if (id === 'next') next();
   else if (id === 'tog') { mode = mode === 'art' ? 'vis' : 'art'; API.setSettings({ mode }); }
-  else if (id === 'drawer1' || id === 'drawer2') { const n = id === 'drawer1' ? 1 : 2; openDrawer(drWant === n ? 0 : n); }
+  else if (/^drawer[123]$/.test(id)) { const n = Number(id.slice(6)); openDrawer(drWant === n ? 0 : n); }
   else if (id === 'mp3s') pickFolder();
   else if (id === 'min') API.minimize(); else if (id === 'close') API.close();
   else if (id === 'gear') setOpen = !setOpen;
@@ -882,6 +930,7 @@ window.addEventListener('keydown', (e) => {
     case 'd': case 'D': openDrawer(drWant ? 0 : drAct); break;
     case '1': openDrawer(drWant === 1 ? 0 : 1); break;
     case '2': openDrawer(drWant === 2 ? 0 : 2); break;
+    case '3': openDrawer(drWant === 3 ? 0 : 3); break;
     case 'Escape': if (setOpen) { setOpen = false; dirty(); } else if (view) { view = null; dirty(); } else openDrawer(false); break;
     case '+': case '=': setVol(vol + 5); break;
     case '-': setVol(vol - 5); break;
@@ -919,6 +968,32 @@ API.onAm((m) => {
       dirty(); break;
   }
 });
+// ---------- music services (SoundCloud) ----------
+if (API.onSvc) API.onSvc((m) => {
+  const sv = m && SVC[m.svc]; if (!sv) return;
+  const playingThis = sv.active && cur && cur.src === m.svc;
+  switch (m.type) {
+    case 'starting': sv.on = true; sv.error = null; dirty(); break;
+    case 'hello': sv.on = sv.on || !!m.started; if (m.signedIn != null) sv.signedIn = m.signedIn; dirty(); break;
+    case 'auth': sv.on = true; sv.signedIn = !!m.signedIn; if (m.signedIn) toast('SIGNED IN TO ' + sv.name); dirty(); break;
+    case 'progress': sv.loading = true; sv.count = m.count; dirty(); break;
+    case 'library': sv.loading = false; sv.error = null; sv.songs = m.songs || []; sv.lists = m.playlists || []; sv.albums = m.albums || []; rebuildLibrary(); if (sv.songs.length) toast(sv.songs.length + ' ' + sv.name + ' SONGS LOADED'); break;
+    case 'state':
+      if (playingThis) {
+        pb.playing = !!m.playing; if (m.mine) pb.time = m.time || 0; if (m.duration) pb.dur = m.duration;
+        if (m.ad && !sv.adToast) { sv.adToast = true; toast(sv.name + ' AD BREAK', 3000); } else if (!m.ad) sv.adToast = false;
+        dirty();
+      }
+      break;
+    case 'ended': if (playingThis) next(); break;
+    case 'error':
+      if (m.where === 'load') { sv.error = 'load'; toast(sv.name + ' IS OFFLINE', 5000); }
+      else if (m.where === 'library') { sv.loading = false; sv.error = 'library'; toast("COULDN'T LOAD YOUR " + sv.name, 6000); }
+      else if (m.where === 'play') { toast(sv.name + " WON'T PLAY THIS. CTRL+SHIFT+L OPENS THE LOG", 7000); pb.playing = false; }
+      console.warn(sv.name + ': ' + JSON.stringify(m));
+      dirty(); break;
+  }
+});
 API.onLocal((l) => { localScan = null; localFolder = l.folder; localFiles = l.files || []; rebuildLibrary(); });
 API.onLocalProgress((p) => { localScan = p; dirty(); });
 API.onLocalError((e) => { localScan = null; toast("COULDN'T READ THAT FOLDER"); console.warn(e); });
@@ -928,8 +1003,15 @@ API.onLocalError((e) => { localScan = null; toast("COULDN'T READ THAT FOLDER"); 
   try {
     const s = await API.getSettings();
     vol = Number.isFinite(s.vol) ? s.vol : 60; fps = Math.max(2, Math.min(60, s.fps || 60)); sfxCrunch = (s.crunch ?? 70) / 100; sfxStatic = (s.static ?? 70) / 100; fxVolume = Number.isFinite(s.fxVolume) ? Math.max(0, Math.min(100, s.fxVolume)) : 35;
-    if (TABS.includes(s.tab)) tab = drStore[1].tab = s.tab; if (TABS.includes(s.tab2)) drStore[2].tab = s.tab2; if (s.mode === 'vis' || s.mode === 'art') mode = s.mode;
-    if (s.drawer === 2) useDrawer(2);
+    if (s.mode === 'vis' || s.mode === 'art') mode = s.mode;
+    // Each drawer's tab, and the last drawer used (0.2.5 kept these as tab / tab2 / drawer 2 = MP3s).
+    savedTabs = Object.assign({ am: s.tab, local: s.tab2 }, s.tabs || {});
+    for (const id of [1, 2, 3]) { const t = savedTabs[DSRC[id]]; if (tabsFor(id).includes(t)) drStore[id].tab = t; }
+    tab = drStore[1].tab;
+    for (const k in SVC) SVC[k].on = !!s[k + 'On'];
+    const lastSrc = s.drawerSrc || (s.drawer === 2 ? 'local' : 'am'), lastId = Number(Object.keys(DSRC).find(k => DSRC[k] === lastSrc) || 1);
+    if (lastId !== 1) useDrawer(lastId);
+    if (API.svcCmd) for (const k in SVC) API.svcCmd(k, { type: 'ping' });
     introOn = s.intro !== false;
     if (s.intro === false) st = performance.now() - T.scr[1] * 1000;
     const l = await API.getLocal(); localFolder = l.folder; localFiles = l.files || []; rebuildLibrary();
