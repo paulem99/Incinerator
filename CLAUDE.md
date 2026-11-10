@@ -50,6 +50,12 @@ Everything people see says Incinerator: window titles, shortcuts, the installer,
   bundled portable Python (`resources/pyevs`). castLabs passwords are never stored: they go to the child
   process through environment variables only.
 - `src/am-hook.js` is injected into music.apple.com and drives MusicKit (library, `setQueue`, playback events).
+- `src/webplayer.js` is the engine for services that run through their own website in a hidden window: sign-in
+  window and popups, a media-element hook for volume and state, state polling, end-of-song detection, and the
+  `svc:*` IPC. Each service has an adapter in `src/services/`. `soundcloud.js` captures the client_id and OAuth
+  token from soundcloud.com's own api-v2 requests, loads likes, playlists and albums, and plays a song by opening
+  its page and clicking play. A Spotify draft, not wired in yet, is in the session scratchpad (`parked/spotify.js`).
+  Drawers: 1 Apple Music, 2 SoundCloud, 3 MP3s (`DSRC` in player.js).
 - `src/player/player.js` is the whole pixel renderer: a 300x268 canvas with the intro, HUD, morgue drawer,
   incinerator volume, settings gear, search, and skull.
 - `installer.nsi` is the per-user NSIS installer. It keeps the existing `.sig` unless the castLabs `version`
@@ -59,7 +65,7 @@ Everything people see says Incinerator: window titles, shortcuts, the installer,
 
 ```
 npm ci
-bash scripts/build-installer.sh            # -> out/The Incinerator Setup.exe (downloads vendor/ on first run)
+bash scripts/build-installer.sh            # -> out/Incinerator Setup.exe (downloads vendor/ on first run)
 node scripts/make-release.js --notes "..."  # -> updates/ (.pak + latest.json), nothing published
 git commit ...                              # code changes, locally
 bash scripts/publish.sh --owner-said-yes    # ONLY after the owner says yes: commits updates/ and pushes main
@@ -71,6 +77,8 @@ For each release:
 - If you change the castLabs Electron version, bump `incinerator.shell` in package.json. Players then need
   the full installer instead of the `.pak`, and they have to sign the new exe once. Run
   `make-release.js --full`, and have the owner upload `out/release-<ver>/` to a GitHub Release by hand.
+- The repo was renamed to paulem99/Incinerator (GitHub redirects the old name). The updater uses the new name
+  from 0.2.6 on.
 - Test locally:
 
   ```
