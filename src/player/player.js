@@ -614,11 +614,11 @@ function searchResults() {
 // Drawer 1 (top) holds Apple Music, drawer 2 the MP3 folder; 3-5 are for show. Only one drawer is out at a time.
 // The lower drawer has less room below it, so it slides out less and shows fewer rows.
 const DRAWERS = { 1: { slot: DRY, travel: TRAYH }, 2: { slot: DECO[0], travel: 241 - DECO[0] }, 3: { slot: DECO[1], travel: 241 - DECO[1] } };
-const tabsFor = (id) => DSRC[id] === 'sc' ? ['ARTISTS', 'ALBUMS', 'SONGS', 'LISTS'] : TABS;
+const tabsFor = (id) => DSRC[id] === 'sc' ? ['LIKES', 'ALBUMS', 'PLAYLISTS'] : TABS;
 const rowsFor = (id) => Math.floor((DRAWERS[id].travel - 21) / RH);
 let tab = 'SONGS', view = null, scroll = 0, drT = 0, sbDrag = null;
 let drAct = 1, drOut = 0, drWant = 0;   // drawer whose lists are shown / drawer that is out (or sliding) / drawer wanted out
-const drStore = { 1: { tab: 'SONGS', view: null, scroll: 0 }, 2: { tab: 'SONGS', view: null, scroll: 0 }, 3: { tab: 'SONGS', view: null, scroll: 0 } };
+const drStore = { 1: { tab: 'SONGS', view: null, scroll: 0 }, 2: { tab: 'LIKES', view: null, scroll: 0 }, 3: { tab: 'SONGS', view: null, scroll: 0 } };
 const scrolls = {};
 function useDrawer(id) {
   if (id === drAct) return;
@@ -676,10 +676,10 @@ function currentRows() {
   if (tab === 'ARTISTS') lib.artists.forEach(a => rows.push({ kind: 'artist', a, label: a.name, right: String(a.songs.length) }));
   else if (tab === 'ALBUMS' && sv) sv.albums.forEach(p => rows.push({ kind: 'plist', p, label: norm(p.name), right: p.count ? String(p.count) : '' }));
   else if (tab === 'ALBUMS') lib.albums.forEach(a => rows.push({ kind: 'album', a, label: a.name, right: a.year || '' }));
-  else if (tab === 'LISTS') (sv ? sv.lists : []).forEach(p => rows.push({ kind: 'plist', p, label: norm(p.name), right: p.count ? String(p.count) : '' }));
-  else if (tab === 'SONGS' && sv && lib.likes) lib.likes.forEach((s, i) => rows.push({ kind: 'song', s, list: lib.likes, i, label: s.T, right: fmt2(s.duration) }));
+  else if (tab === 'PLAYLISTS') (sv ? sv.lists : []).forEach(p => rows.push({ kind: 'plist', p, label: norm(p.name), right: p.count ? String(p.count) : '' }));
+  else if (tab === 'LIKES' && lib.likes) lib.likes.forEach((s, i) => rows.push({ kind: 'song', s, list: lib.likes, i, label: s.T, right: fmt2(s.duration) }));
   else { const list = tab === 'SONGS' ? lib.songs : lib.recent; list.forEach((s, i) => rows.push({ kind: 'song', s, list, i, label: s.T, right: fmt2(s.duration) })); }
-  if (rows.length === 0) rows.push({ kind: 'info', label: tab === 'RECENT' ? 'NOTHING ADDED RECENTLY' : tab === 'LISTS' ? 'NO PLAYLISTS YET' : tab === 'ALBUMS' && sv ? 'NO ALBUMS YET' : src === 'local' ? 'NO MP3S YET' : 'NO SONGS YET' });
+  if (rows.length === 0) rows.push({ kind: 'info', label: tab === 'RECENT' ? 'NOTHING ADDED RECENTLY' : tab === 'PLAYLISTS' ? 'NO PLAYLISTS YET' : tab === 'LIKES' ? 'NO LIKES YET' : tab === 'ALBUMS' && sv ? 'NO ALBUMS YET' : src === 'local' ? 'NO MP3S YET' : 'NO SONGS YET' });
   return rows;
 }
 function rowAction(r) {
@@ -720,7 +720,7 @@ function drawOne(id, v, live, tn) {
   if (off > 2 && live && id === drAct) {
     const clip = (x, y, c) => { if (y >= D.slot && y < fy && x >= DRX0 + 3 && x < DRX1 - 3) oput(x, y, c); };
     // tabs, or the search line while searching
-    const TB = tabsFor(id), ws = TB.map(t => bw(t, 1)), gap = Math.floor((SHW - 6 - ws.reduce((a, b) => a + b, 0)) / 3);
+    const TB = tabsFor(id), ws = TB.map(t => bw(t, 1)), gap = Math.floor((SHW - 6 - ws.reduce((a, b) => a + b, 0)) / (TB.length - 1));
     let tx = DRX0 + 6; const ty = top + 2;
     if (searchQ !== null) {
       patt(MAG, DRX0 + 6, ty + 1, INK, clip);

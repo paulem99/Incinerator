@@ -1,7 +1,7 @@
 {
   "name": "the-incinerator",
   "productName": "The Incinerator",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "A morgue-themed pixel MP3 and Apple Music player",
   "main": "boot.js",
   "private": true,

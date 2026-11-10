@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.7
+- SoundCloud drawer tabs: **LIKES**, **ALBUMS**, **PLAYLISTS**
+
 ## 0.2.6
 - **SoundCloud** drawer: sign in once and play your likes, playlists and albums
 - MP3s moved to drawer 3

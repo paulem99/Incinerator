@@ -1,11 +1,11 @@
 {
-  "version": "0.2.6",
-  "date": "2026-11-10T00:03:41.032Z",
-  "notes": "SoundCloud drawer: sign in once and play your likes, playlists and albums. MP3s moved to drawer 3.",
+  "version": "0.2.7",
+  "date": "2026-11-10T00:28:47.880Z",
+  "notes": "SoundCloud drawer tabs: LIKES, ALBUMS, PLAYLISTS.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.6.pak",
-    "size": 344511,
-    "sha256": "050e82ae0d0c031ff802106cbdc788e706de267052f6a69afcaeed12a48839a2"
+    "file": "incinerator-app-0.2.7.pak",
+    "size": 344530,
+    "sha256": "be0b77a7f21255a13f20dffbfa6dfb6ff777c0e37b1954a9230b24f07928d478"
   }
 }
