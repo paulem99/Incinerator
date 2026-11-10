@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.8
+- SoundCloud songs start right away when you skip or pick a song
+
 ## 0.2.7
 - SoundCloud drawer tabs: **LIKES**, **ALBUMS**, **PLAYLISTS**
 

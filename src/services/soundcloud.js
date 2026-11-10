@@ -111,6 +111,22 @@ module.exports = {
 
   keyOf: (t) => t.path || pathOf(t.url),
 
+  // The song's audio stream, so the player can play it itself.
+  async streamUrl(ctx, t) {
+    if (!/^\d+$/.test(String(t.id))) return null;
+    const full = await get(ctx, `/tracks/${t.id}`);
+    const tcs = ((full.media && full.media.transcodings) || []).filter(x => x && x.url && x.format && !x.snipped === !(full.policy === 'SNIP'));
+    const kind = (x) => x.format.protocol, mime = (x) => x.format.mime_type || '';
+    const pick = tcs.find(x => kind(x) === 'progressive')
+      || tcs.find(x => kind(x) === 'hls' && /mpeg/.test(mime(x)))
+      || tcs.find(x => kind(x) === 'hls' && /mp4|aac/.test(mime(x)));
+    if (!pick) return null;
+    const u = new URL(pick.url);
+    if (full.track_authorization) u.searchParams.set('track_authorization', full.track_authorization);
+    const r = await get(ctx, u.toString());
+    return r && r.url ? { url: r.url, hls: kind(pick) === 'hls', duration: (full.duration || 0) / 1000 } : null;
+  },
+
   // Open the song in the hidden page and press its big play button.
   async play(ctx, t) {
     const path = t.path || pathOf(t.url);
@@ -119,7 +135,7 @@ module.exports = {
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const here = () => location.pathname.replace(/\\/$/, '').toLowerCase() === want;
       if (!here()) { history.pushState(null, '', want); dispatchEvent(new PopStateEvent('popstate', { state: null })); }
-      for (let t0 = Date.now(); Date.now() - t0 < 9000; await sleep(150)) {
+      for (let t0 = Date.now(); Date.now() - t0 < 5000; await sleep(120)) {
         if (!here()) continue;
         const b = document.querySelector('.fullHero .sc-button-play, .l-listen-hero .sc-button-play, .soundTitle .sc-button-play, .fullHero__title .sc-button-play');
         if (b) { if (!b.classList.contains('sc-button-pause')) b.click(); return 'clicked'; }

@@ -175,6 +175,15 @@ function makeService(ad, o) {
     }
   }
 
+  // A direct audio stream for a song, when the service offers one (much faster than driving the page).
+  async function stream(t) {
+    if (!ad.streamUrl) return null;
+    if (!S.signedIn) return null;
+    const r = await ad.streamUrl(ctx, t);
+    log(`stream ${t.id}: ${r ? (r.hls ? 'hls' : 'progressive') : 'none, using the page'}`);
+    return r;
+  }
+
   async function playlist(id) {
     if (S.plCache.has(String(id))) return S.plCache.get(String(id));
     const songs = await ad.playlist(ctx, id);
@@ -185,11 +194,15 @@ function makeService(ad, o) {
   // The hidden site is heavy, so it only starts at launch once the service has been signed in before.
   function start() { if (o.getSetting(ad.key + 'On')) create(); }
 
-  return (services[ad.key] = { key: ad.key, cmd, playlist, start, show });
+  return (services[ad.key] = { key: ad.key, cmd, playlist, stream, start, show });
 }
 
 function wireIpc(log) {
   ipcMain.on('svc:cmd', (_e, svc, m) => { const s = services[svc]; if (s && m && typeof m === 'object') s.cmd(m); });
+  ipcMain.handle('svc:stream', async (_e, svc, t) => {
+    const s = services[svc]; if (!s || !t) return null;
+    try { return await s.stream(t); } catch (e) { log(svc, 'stream lookup failed: ' + String(e.message || e).slice(0, 160)); return null; }
+  });
   ipcMain.handle('svc:playlist', async (_e, svc, id) => {
     const s = services[svc]; if (!s) return { error: 'unknown service' };
     try { return { songs: await s.playlist(id) }; } catch (e) { log(svc, 'playlist failed: ' + String(e.message || e).slice(0, 160)); return { error: String(e.message || e).slice(0, 160) }; }

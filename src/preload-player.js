@@ -35,5 +35,6 @@ contextBridge.exposeInMainWorld('incin', {
   onUpdate: on('update:status'),
   svcCmd: (svc, msg) => ipcRenderer.send('svc:cmd', svc, msg),
   onSvc: on('svc:evt'),
-  svcPlaylist: (svc, id) => ipcRenderer.invoke('svc:playlist', svc, id)
+  svcPlaylist: (svc, id) => ipcRenderer.invoke('svc:playlist', svc, id),
+  svcStream: (svc, t) => ipcRenderer.invoke('svc:stream', svc, t)
 });

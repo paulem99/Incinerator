@@ -1,11 +1,11 @@
 {
-  "version": "0.2.7",
-  "date": "2026-11-10T00:28:47.880Z",
-  "notes": "SoundCloud drawer tabs: LIKES, ALBUMS, PLAYLISTS.",
+  "version": "0.2.8",
+  "date": "2026-11-10T00:34:30.632Z",
+  "notes": "SoundCloud songs start right away when you skip or pick a song.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.7.pak",
-    "size": 344530,
-    "sha256": "be0b77a7f21255a13f20dffbfa6dfb6ff777c0e37b1954a9230b24f07928d478"
+    "file": "incinerator-app-0.2.8.pak",
+    "size": 455071,
+    "sha256": "fa5b17573273bf78f05d794c42dbef16909acbfef6f22170cd76bd96acac4e53"
   }
 }

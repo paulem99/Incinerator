@@ -369,49 +369,92 @@ let toastMsg = null, toastUntil = 0;
 function toast(m, ms) { toastMsg = norm(m); toastUntil = performance.now() + (ms || 4000); dirty(); try { API.log && API.log('toast: ' + m); } catch { } }
 const gain = () => Math.pow(vol / 100, 1.6);
 function applyVol() { audio.volume = Math.min(1, gain()); if (amReady) API.amCmd({ type: 'volume', value: gain() }); if (API.svcCmd) for (const k in SVC) if (SVC[k].on) API.svcCmd(k, { type: 'volume', value: gain() }); }
-// Only one thing plays at a time: stop every source except the one about to play.
-function quiet(src) {
-  if (src !== 'local' && audio.getAttribute('src')) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
-  if (src !== 'am' && amActive) { API.amCmd({ type: 'pause' }); amActive = false; }
-  for (const k in SVC) if (src !== k && SVC[k].active) { API.svcCmd(k, { type: 'stop' }); SVC[k].active = false; }
+// Songs that play through the player's own audio element: MP3s, and service songs streamed directly.
+const viaAudio = () => !!(cur && (cur.src === 'local' || cur.direct));
+let hls = null, playToken = 0;
+function stopAudio() {
+  if (hls) { try { hls.destroy(); } catch (_) {} hls = null; }
+  if (audio.getAttribute('src')) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+}
+// Only one thing plays at a time: stop whatever is playing before the next song starts.
+function quiet() {
+  stopAudio();
+  if (amActive) { API.amCmd({ type: 'pause' }); amActive = false; }
+  for (const k in SVC) if (SVC[k].active) { API.svcCmd(k, { type: 'stop' }); SVC[k].active = false; }
 }
 function playList(list, i) { if (!list || !list.length) return; queue = list.slice(); qi = Math.max(0, Math.min(i, queue.length - 1)); startCur(); }
 function startCur() {
   cur = queue[qi]; if (!cur) return; stopped = false;
+  const token = ++playToken;
   pb.time = 0; pb.dur = cur.duration || 0; pb.playing = true;
-  quiet(cur.src);
+  cur.direct = false;
+  quiet();
   if (cur.src === 'local') {
     audio.src = API.fileUrl(cur.path); audio.currentTime = 0;
     audio.play().catch(() => toast("CAN'T PLAY THIS FILE"));
-  } else if (SVC[cur.src]) {
-    const sv = SVC[cur.src];
-    if (!sv.signedIn) { toast('SIGN IN TO ' + sv.name + ' FIRST'); pb.playing = false; return; }
-    sv.active = true;
-    API.svcCmd(cur.src, { type: 'play', track: { id: cur.id, url: cur.url, path: cur.path, uri: cur.uri, duration: cur.duration } });
-  } else {
+  } else if (SVC[cur.src]) startSvc(cur, token);
+  else {
     if (!amAuth) { toast('SIGN IN TO APPLE MUSIC FIRST'); pb.playing = false; return; }
     amActive = true;
     API.amCmd({ type: 'playSong', id: cur.id, catalogId: cur.catalogId });
   }
   applyVol(); loadArt(cur); dirty();
 }
+// Service songs: stream straight into the player when the service gives a stream (fast), otherwise play the
+// song in the service's hidden page.
+async function startSvc(c, token) {
+  const sv = SVC[c.src];
+  if (!sv.signedIn) { toast('SIGN IN TO ' + sv.name + ' FIRST'); pb.playing = false; dirty(); return; }
+  let st = null;
+  if (API.svcStream && !c.noDirect) { try { st = await API.svcStream(c.src, { id: c.id }); } catch (_) {} }
+  if (token !== playToken) return;   // a different song was picked meanwhile
+  if (st && st.url) { c.direct = true; if (st.duration) pb.dur = st.duration; playStream(c, st, token); }
+  else pagePlay(c);
+}
+function pagePlay(c) {
+  const sv = SVC[c.src];
+  c.direct = false; sv.active = true;
+  API.svcCmd(c.src, { type: 'play', track: { id: c.id, url: c.url, path: c.path, uri: c.uri, duration: c.duration } });
+  applyVol();
+}
+function playStream(c, st, token) {
+  const u = 'incin://net/?u=' + encodeURIComponent(st.url);
+  // If the stream won't play, fall back to the service's page for this song.
+  const fail = (why) => { if (token !== playToken || !c.direct) return; console.warn('stream failed (' + why + '), using the page'); stopAudio(); c.noDirect = true; pagePlay(c); };
+  c.streamFail = fail;
+  if (st.hls) {
+    if (!(window.Hls && Hls.isSupported())) return fail('no hls');
+    hls = new Hls({ enableWorker: false, maxBufferLength: 30 });
+    hls.on(Hls.Events.ERROR, (_e, d) => { if (d && d.fatal) fail('hls ' + d.details); });
+    hls.on(Hls.Events.MANIFEST_PARSED, () => { if (token === playToken) audio.play().catch(() => fail('play')); });
+    hls.loadSource(u); hls.attachMedia(audio);
+  } else {
+    audio.src = u; audio.currentTime = 0;
+    audio.play().catch(() => fail('play'));
+  }
+  applyVol();
+}
 function next() { if (!queue.length) return; if (qi + 1 >= queue.length) { stopAll(); return; } qi++; startCur(); }
 function prev() { if (!cur) return; if (pb.time > 3 || qi === 0) seek(0); else { qi--; startCur(); } }
-function stopAll() { if (cur && cur.src === 'local') audio.pause(); else if (cur && SVC[cur.src]) API.svcCmd(cur.src, { type: 'pause' }); else if (amActive) API.amCmd({ type: 'pause' }); pb.playing = false; stopped = true; dirty(); }
+function stopAll() { if (viaAudio()) audio.pause(); else if (cur && SVC[cur.src]) API.svcCmd(cur.src, { type: 'pause' }); else if (amActive) API.amCmd({ type: 'pause' }); pb.playing = false; stopped = true; dirty(); }
 function toggle() {
   if (!cur) { const l = lib.songs; if (l.length) playList(l, 0); else openDrawer(true); return; }
-  if (cur.src === 'local') { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }
+  if (viaAudio()) { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }
   else if (SVC[cur.src]) API.svcCmd(cur.src, { type: pb.playing ? 'pause' : 'resume' });
   else API.amCmd({ type: pb.playing ? 'pause' : 'play' });
   pb.playing = !pb.playing; if (pb.playing) stopped = false; dirty();
 }
-function seek(t) { if (!cur) return; t = Math.max(0, Math.min(t, (pb.dur || 0) - 0.25)); if (cur.src === 'local') audio.currentTime = t; else if (SVC[cur.src]) API.svcCmd(cur.src, { type: 'seek', time: t }); else API.amCmd({ type: 'seek', time: t }); pb.time = t; dirty(); }
-audio.addEventListener('timeupdate', () => { if (cur && cur.src === 'local') pb.time = audio.currentTime; });
-audio.addEventListener('durationchange', () => { if (cur && cur.src === 'local' && Number.isFinite(audio.duration)) pb.dur = audio.duration; });
-audio.addEventListener('play', () => { if (cur && cur.src === 'local') { pb.playing = true; dirty(); } });
-audio.addEventListener('pause', () => { if (cur && cur.src === 'local') { pb.playing = false; dirty(); } });
-audio.addEventListener('ended', () => { if (cur && cur.src === 'local') next(); });
-audio.addEventListener('error', () => { if (cur && cur.src === 'local' && audio.getAttribute('src')) { toast("CAN'T PLAY THIS FILE"); setTimeout(next, 1200); } });
+function seek(t) { if (!cur) return; t = Math.max(0, Math.min(t, (pb.dur || 0) - 0.25)); if (viaAudio()) audio.currentTime = t; else if (SVC[cur.src]) API.svcCmd(cur.src, { type: 'seek', time: t }); else API.amCmd({ type: 'seek', time: t }); pb.time = t; dirty(); }
+audio.addEventListener('timeupdate', () => { if (viaAudio()) pb.time = audio.currentTime; });
+audio.addEventListener('durationchange', () => { if (viaAudio() && Number.isFinite(audio.duration) && audio.duration > 0) pb.dur = audio.duration; });
+audio.addEventListener('play', () => { if (viaAudio()) { pb.playing = true; dirty(); } });
+audio.addEventListener('pause', () => { if (viaAudio() && audio.getAttribute('src')) { pb.playing = false; dirty(); } });
+audio.addEventListener('ended', () => { if (viaAudio()) next(); });
+audio.addEventListener('error', () => {
+  if (!viaAudio() || !audio.getAttribute('src') || hls) return;
+  if (cur.direct && cur.streamFail) cur.streamFail('audio error');
+  else { toast("CAN'T PLAY THIS FILE"); setTimeout(next, 1200); }
+});
 
 // ---------- album art ----------
 const artCache = new Map();

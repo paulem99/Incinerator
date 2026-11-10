@@ -139,6 +139,7 @@ function parseRange(h, size) {
 function registerProtocol() {
   protocol.handle('incin', async (req) => {
     const u = new URL(req.url);
+    if (u.host === 'net') return proxyStream(req, u);
     if (u.host !== 'file') return new Response('not found', { status: 404 });
     const p = u.searchParams.get('p');
     if (!p || !allowedFiles.has(p)) return new Response('forbidden', { status: 403 });
@@ -152,6 +153,37 @@ function registerProtocol() {
     }
     return new Response(Readable.toWeb(fs.createReadStream(p)), { status: 200, headers: { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Content-Length': String(st.size) } });
   });
+}
+
+// Streams from music services' audio servers for the player (incin://net/?u=<url>). Only those servers are
+// allowed, so this can't be used to reach anything else. HLS playlists get their entries rewritten to come
+// through here too.
+const STREAM_HOSTS = /(^|\.)sndcdn\.com$/i;
+const DEV_STREAMS = !!process.env.INCIN_SC_API;
+const viaProxy = (abs) => 'incin://net/?u=' + encodeURIComponent(abs.toString());
+async function proxyStream(req, u) {
+  let t;
+  try { t = new URL(u.searchParams.get('u')); } catch { return new Response('bad url', { status: 400 }); }
+  const ok = (t.protocol === 'https:' && STREAM_HOSTS.test(t.hostname)) || (DEV_STREAMS && t.protocol === 'http:' && /^(127\.0\.0\.1|localhost)$/.test(t.hostname));
+  if (!ok) return new Response('forbidden', { status: 403 });
+  const headers = {}, range = req.headers.get('range');
+  if (range) headers.Range = range;
+  let r;
+  try { r = await net.fetch(t.toString(), { headers }); } catch (e) { return new Response('fetch failed', { status: 502 }); }
+  const out = { 'Access-Control-Allow-Origin': '*' };
+  for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges']) { const v = r.headers.get(h); if (v) out[h] = v; }
+  if (/mpegurl/i.test(out['content-type'] || '') || /\.m3u8$/i.test(t.pathname)) {
+    const text = await r.text();
+    const body = text.split('\n').map((line) => {
+      const l = line.trim();
+      if (!l) return line;
+      if (l.startsWith('#')) return line.replace(/URI="([^"]+)"/g, (_m, x) => `URI="${viaProxy(new URL(x, t))}"`);
+      return viaProxy(new URL(l, t));
+    }).join('\n');
+    delete out['content-length'];
+    return new Response(body, { status: r.status, headers: out });
+  }
+  return new Response(r.body, { status: r.status, headers: out });
 }
 
 // ---------- helpers ----------
