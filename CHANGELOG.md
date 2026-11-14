@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.11
+- New intro: the rusted doors cover the whole window, open to black, and the room fades in after ENTER
+
 ## 0.2.10
 - Drag the bottom-right corner to resize the window
 - Closing the window now always stops the music and fully quits

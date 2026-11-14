@@ -894,6 +894,54 @@ const bootAt = performance.now();
 let fireAcc = 0, lastRender = performance.now();
 let fps = 60, st = performance.now(), last = -1, fl = 0, pnow = performance.now(), introDone = false;
 const dirty = () => { last = -1; };
+// ---------- intro: rusted double doors over the whole window ----------
+// Built last so the other textures (which share the random sequence) stay exactly as they were.
+const BD = new Array(OW * OH), BHW = OW >> 1;
+(() => {
+  const n1 = VN(OW, OH, 16), n2 = VN(OW, OH, 5), streaks = [];
+  for (let x = 0; x < OW; x++) streaks.push(R() < 0.2 ? [(R() * OH) | 0, 10 + (R() * 50 | 0)] : null);
+  const BARS = [38, 96, 168, 226];
+  for (let y = 0; y < OH; y++) for (let x = 0; x < OW; x++) {
+    let n = n1(x, y) * 0.7 + n2(x, y) * 0.3 + (y / OH) * 0.08; const st = streaks[x]; if (st && y >= st[0] && y < st[0] + st[1]) n += 0.35;
+    const hx = x % BHW; let k = 1;
+    if (hx < 3 || hx > BHW - 4 || y < 3 || y > OH - 4) k = 0.6;
+    for (const b of BARS) if (y >= b && y < b + 6) k = y === b ? 1.3 : y === b + 5 ? 0.45 : 1.08;
+    BD[y * OW + x] = sc(metal(n, R()), k);
+  }
+  const set = (x, y, c) => { if (x >= 0 && x < OW && y >= 0 && y < OH) BD[y * OW + x] = c; };
+  for (let k = 0; k < 40; k++) { const x = R() * OW | 0, y = R() * OH | 0, l = 3 + (R() * 9 | 0); for (let j = 0; j < l; j++) set(x + j, y + (j >> 1), P.s4); }   // scratches
+  for (const h0 of [0, BHW]) {
+    for (let y = 8; y < OH - 6; y += 10) { rivet(set, h0 + 5, y); rivet(set, h0 + BHW - 7, y); }
+    for (const b of BARS) for (let x = 12; x < BHW - 10; x += 9) rivet(set, h0 + x, b + 2);
+  }
+  // seam and handles
+  for (let y = 0; y < OH; y++) { set(BHW - 1, y, P.rd); set(BHW, y, [14, 8, 5]); }
+  for (const hx of [BHW - 12, BHW + 9]) for (let y = 116; y < 152; y++) { const e = y === 116 || y === 151; set(hx, y, e ? P.rd : P.hi); set(hx + 1, y, e ? P.rd : P.s4); set(hx + 2, y, P.rd); }
+  // blood
+  const splat = (x0, y0, r) => { for (let y = -r - 2; y <= r + 2; y++) for (let x = -r - 2; x <= r + 2; x++) { const d = Math.hypot(x, y) + (R() - 0.5) * 1.8; if (d < r) set(x0 + x, y0 + y, d < r * 0.5 ? BL[1] : BL[R() < 0.5 ? 2 : 1]); else if (d < r + 3 && R() < 0.15) set(x0 + x, y0 + y, BL[2]); } for (let k = 0; k < 9; k++) { const a = R() * 6.28, dd = r + 2 + R() * 9; set(x0 + Math.round(Math.cos(a) * dd), y0 + Math.round(Math.sin(a) * dd), BL[2]); } };
+  const drip = (x, y, len) => { for (let j = 0; j < len; j++) set(x, y + j, BL[R() < 0.3 ? 2 : 1]); set(x, y + len, BL[0]); set(x + 1, y + len, BL[0]); set(x, y + len + 1, BL[0]); };
+  splat(52, 84, 7); drip(47, 90, 34); drip(52, 92, 58); drip(57, 90, 22); splat(214, 60, 5); drip(211, 64, 28); drip(217, 65, 40);
+  splat(236, 190, 4); drip(234, 194, 18); drip(238, 193, 12); splat(96, 206, 3); drip(95, 209, 14);
+  for (const [x, l] of [[30, 12], [88, 20], [132, 9], [170, 16], [262, 24], [205, 7]]) drip(x, 3, l);
+  for (let k = 0; k < 40; k++) set(180 + (R() * 50 | 0), 30 + (R() * 50 | 0), BL[R() < 0.5 ? 2 : 3]);
+  // a hand dragged down the left door
+  const hx0 = 104, hy0 = 124;
+  [[1, 2], [4, 0], [7, 0], [10, 1], [13, 3]].forEach(([fx, ft]) => { for (let y = ft; y < 7; y++) for (const dx of [0, 1]) if (R() > 0.12) set(hx0 + fx + dx, hy0 + y, BL[2]); });
+  for (let y = 7; y < 16; y++) for (let x = 1; x < 15; x++) if (R() > 0.1) set(hx0 + x, hy0 + y, R() < 0.25 ? BL[1] : BL[2]);
+  for (let x = 1; x < 15; x++) { const len = 10 + (R() * 34 | 0); for (let j = 0; j < len; j++) if (R() > j / len * 0.75) set(hx0 + x, hy0 + 16 + j, j > len * 0.6 ? BL[0] : BL[1]); }
+})();
+function drawBigDoor(open, shx, v) {
+  const off = Math.round(open * BHW);
+  for (let y = 0; y < OH; y++) for (let x = 0; x < OW; x++) {
+    if (v && !v(orank(x, y))) continue;
+    const lx = x - shx; let c = null, sx = lx + off;
+    if (sx >= 0 && sx < BHW) c = BD[y * OW + sx];
+    else { sx = lx - off; if (sx >= BHW && sx < OW) c = BD[y * OW + sx]; }
+    if (c) oput(x, y, c);
+    else { const d = Math.min(Math.abs(lx - (BHW - off)), Math.abs(lx - (BHW + off))); oput(x, y, d < 2 ? [20, 10, 6] : VOID); }
+  }
+}
+
 function frame(now) {
   const dt = Math.min(0.25, (now - pnow) / 1000); pnow = now;
   const raw = (now - st) / 1000; hudOn = raw >= T.scr[1];
@@ -903,13 +951,14 @@ function frame(now) {
   else if (drOut && drT < 1) drT = Math.min(1, drT + dt * 2.2);
   const fi = Math.floor(raw * fps);
   if (fi !== last) {
-    last = fi; fl++; const t = fi / fps; let ob = 0; hits = []; clearAll();
+    last = fi; fl++; const t = fi / fps; let ob = 0, intro = 0; hits = []; clearAll();
     fireAcc += Math.min(0.5, (now - lastRender) / 1000) * 15; lastRender = now; let fsN = Math.min(8, Math.floor(fireAcc)); fireAcc -= fsN; while (fsN-- > 0) fireStep();
     if (t < T.din[0]) { }
-    else if (t < T.rat[0]) { const p = pr(t, T.din), v = r => r < p; drawTile(v); drawInc(v); drawDoor(0, 0, v); ob = v; }
-    else if (t < T.open[0]) { drawTile(); drawInc(); drawDoor(0, t < T.rat[1] ? (fl % 2 ? 1 : -1) : 0); ob = 1; }
-    else if (t < T.fout[0]) { const p = pr(t, T.open), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; drawTile(); drawInc(); drawDoor(e, p < 1 ? fl % 2 : 0); ob = 1; }
-    else if (t < T.fout[1]) { const p = pr(t, T.fout), v = r => r >= p; drawTile(v); drawInc(v); drawDoor(1, 0, v); ob = v; }
+    // The doors cover the whole window; the room behind them only appears after ENTER.
+    else if (t < T.rat[0]) { const p = pr(t, T.din), v = r => r < p; drawBigDoor(0, 0, v); intro = v; }
+    else if (t < T.open[0]) { drawBigDoor(0, t < T.rat[1] ? (fl % 2 ? 1 : -1) : 0); intro = 1; }
+    else if (t < T.fout[0]) { const p = pr(t, T.open), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; drawBigDoor(e, p < 1 ? fl % 2 : 0); intro = 1; }
+    else if (t < T.fout[1]) { const p = pr(t, T.fout); intro = r => r >= p; }
     else if (t < T.name[0]) { }
     else if (t < T.name[1]) { const p = pr(t, T.name); if (p < 0.35 ? hsh(Math.floor(t * 15), 7, 7, 7) < p / 0.35 * 0.9 : p < 0.92) enter(); }
     else if (t < T.bez[0]) { }
@@ -917,6 +966,7 @@ function frame(now) {
     else if (t < T.scr[0]) { drawTile(); drawInc(); drawDrawer(null, false, 0); drawBez(); ob = 1; }
     else { const tn = now / 1000; drawTile(); drawInc(); if (skullT >= 1) incSkull(tn); drawDrawer(null, true, tn); drawBez(); screen(pr(t, T.scr), tn); if (skullT > 0 && skullT < 1) skullFlight(tn); ob = 1; }
     if (ob) { const v = ob === 1 ? null : ob; drawWire(v); if (ob === 1) bugs(t); drawBarbs(v); if (ob === 1) firelight(); }
+    if (intro) { const v = intro === 1 ? null : intro; drawWire(v); drawBarbs(v); }   // barbed wire frames the doors
     if (hudOn) { winButtons(); gear(); }
     cx.putImageData(img, 0, 0);
   }

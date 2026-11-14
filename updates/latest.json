@@ -1,11 +1,11 @@
 {
-  "version": "0.2.10",
-  "date": "2026-11-14T10:08:18.522Z",
-  "notes": "Drag the bottom-right corner to resize. Closing the window now always stops the music and fully quits.",
+  "version": "0.2.11",
+  "date": "2026-11-14T10:14:55.149Z",
+  "notes": "New intro: the rusted doors cover the whole window, open to black, and the room fades in after ENTER.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.10.pak",
-    "size": 456632,
-    "sha256": "c533da9690c75dbff1b1879ed6bfedf0760410fc91ed6ff815eb48f7e30b0074"
+    "file": "incinerator-app-0.2.11.pak",
+    "size": 458298,
+    "sha256": "edc5afcc1fd9c4f1d6ce860d594464075afe3d6331a6fbd8ae313c8dc380db8a"
   }
 }
