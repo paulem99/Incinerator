@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.9
+- Click the song, artist or album on the screen to open it in its drawer
+- Artists open as their albums first, then all their songs
+
 ## 0.2.8
 - SoundCloud songs start right away when you skip or pick a song
 

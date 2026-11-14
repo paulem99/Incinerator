@@ -620,7 +620,13 @@ function hud(tn) {
   for (let i = 0; i < 52; i++) { sp(4 + i, 16, SC2); sp(4 + i, 67, SC2); sp(4, 16 + i, SC2); sp(55, 16 + i, SC2); }
   const rows = cur ? [[ICN.note, norm(cur.title), SCT], [ICN.artist, norm(cur.artist), SC1], [ICN.album, norm(cur.album), SC1], [ICN.year, cur.year || '-', SC1]]
     : [[ICN.note, 'NOTHING ON', SCT], [ICN.artist, amUnsigned ? 'SET UP BELOW' : amReady && !amAuth ? 'SIGN IN BELOW' : 'OPEN DRAWER', SC2], [ICN.album, amLoading ? 'LOADING ' + amCount + ' SONGS' : '', SC2], [ICN.year, '', SC2]];
-  rows.forEach(([ic, v, c], k) => { const y = 16 + k * 10; patt(ic, 61, y + 1, SC2); if (v) marq(sp, v, 71, y, 83, c, tn + k * 0.7, SHD); });
+  rows.forEach(([ic, v, c], k) => {
+    const y = 16 + k * 10, id = cur && v && k < 3 ? 'np' + k : null, hv = id && hover === id;
+    patt(ic, 61, y + 1, hv ? SCT : SC2); if (v) marq(sp, v, 71, y, 83, hv ? [255, 120, 110] : c, tn + k * 0.7, SHD);
+    if (hv) for (let x = 71; x < 154; x += 2) sp(x, y + 9, SC2);
+    // Click the song, artist or album to open it in its drawer.
+    if (id) hits.push({ id, x: SX + 60, y: SY + y - 1, w: 96, h: 10 });
+  });
   if (pb.playing || Math.floor(tn * 2) % 2 === 0) bt(sp, fmt(pb.time), 61, 57, 2, SCT, { sh: SHD });
   const tot = '/' + fmt(pb.dur); bt(sp, tot, 154 - bw(tot, 1), 66, 1, SC2, { sh: SHD2 });
   const wx0 = 4, wx1 = 154, ww = wx1 - wx0, frac = pb.dur > 0 ? Math.min(1, pb.time / pb.dur) : 0, kx = wx0 + Math.round(frac * (ww - 1)), wy = 81;
@@ -713,6 +719,11 @@ function currentRows() {
     rows.push({ kind: 'back', label: '< ' + view.title });
     if (view.loading) rows.push({ kind: 'info', label: 'LOADING...' });
     if (view.error) rows.push({ kind: 'info', label: "COULDN'T OPEN THIS LIST" });
+    if (view.albums && view.albums.length) {
+      rows.push({ kind: 'info', label: '- ALBUMS -' });
+      view.albums.forEach(a => rows.push({ kind: 'album', a, label: a.name, right: a.year || '' }));
+      rows.push({ kind: 'info', label: '- SONGS -' });
+    }
     view.list.forEach((s, i) => rows.push({ kind: 'song', s, list: view.list, i, label: norm(s.title), right: fmt2(s.duration) }));
     return rows;
   }
@@ -725,11 +736,37 @@ function currentRows() {
   if (rows.length === 0) rows.push({ kind: 'info', label: tab === 'RECENT' ? 'NOTHING ADDED RECENTLY' : tab === 'PLAYLISTS' ? 'NO PLAYLISTS YET' : tab === 'LIKES' ? 'NO LIKES YET' : tab === 'ALBUMS' && sv ? 'NO ALBUMS YET' : src === 'local' ? 'NO MP3S YET' : 'NO SONGS YET' });
   return rows;
 }
+// An artist opens as their albums, then all their songs. An album opened from there goes back to the artist.
+function openArtist(a) {
+  scrolls[viewKey()] = scroll;
+  const ak = keyOf(a.name), albums = lib.albums.filter(x => keyOf(x.artist) === ak && x.name !== 'UNKNOWN ALBUM');
+  view = { kind: 'artist', key: a.name, title: a.name, list: a.songs, albums, parent: null }; scroll = 0;
+}
+function openAlbum(a) {
+  scrolls[viewKey()] = scroll;
+  view = { kind: 'album', key: a.name + a.artist, title: a.name, list: a.songs, parent: view && view.kind === 'artist' ? view : null }; scroll = 0;
+}
+// Clicking the song, artist or album on the screen opens it in the drawer the song came from.
+function openNowPlaying(k) {
+  if (!cur) return;
+  const id = Number(Object.keys(DSRC).find(d => DSRC[d] === cur.src)); if (!id) return;
+  searchQ = null; openDrawer(id); if (drAct !== id) useDrawer(id);
+  const ak = keyOf(cur.artist) || '?', L = libs[cur.src];
+  const artist = L.artists.find(a => (keyOf(a.name) || '?') === ak || a.name === norm(cur.artist));
+  const album = L.albums.find(a => a.songs.some(x => sameSong(x, cur)));
+  view = null;
+  if (k === 1 || !album || album.name === 'UNKNOWN ALBUM') { if (artist) openArtist(artist); else toast('NOT IN YOUR LIBRARY'); }
+  else {
+    openAlbum(album);
+    if (k === 0) { const i = album.songs.findIndex(x => sameSong(x, cur)); scroll = Math.max(0, i + 1 - 1); }
+  }
+  dirty();
+}
 function rowAction(r) {
   if (r.kind === 'song') playList(r.list, r.i);
-  else if (r.kind === 'artist') { scrolls[viewKey()] = scroll; view = { kind: 'artist', key: r.a.name, title: r.a.name, list: r.a.songs }; scroll = 0; }
-  else if (r.kind === 'album') { scrolls[viewKey()] = scroll; view = { kind: 'album', key: r.a.name + r.a.artist, title: r.a.name, list: r.a.songs }; scroll = 0; }
-  else if (r.kind === 'back') { view = null; scroll = scrolls[viewKey()] || 0; }
+  else if (r.kind === 'artist') openArtist(r.a);
+  else if (r.kind === 'album') openAlbum(r.a);
+  else if (r.kind === 'back') { view = view.parent || null; scroll = scrolls[viewKey()] || 0; }
   else if (r.kind === 'plist') openList(DSRC[drAct], r.p);
   else if (r.act === 'svcsignin') { SVC[DSRC[drAct]].on = true; API.svcCmd(DSRC[drAct], { type: 'signin' }); toast('SIGN IN IN THE ' + SVC[DSRC[drAct]].name + ' WINDOW'); }
   else if (r.act === 'svcretry') { SVC[DSRC[drAct]].error = null; API.svcCmd(DSRC[drAct], { type: 'reload' }); }
@@ -899,6 +936,7 @@ function act(h) {
   else if (id === 'search-x') endSearch();
   else if (id === 'set:done') setOpen = false;
   else if (id === 'set:test') replayIntro();
+  else if (/^np[012]$/.test(id)) openNowPlaying(Number(id[2]));
   else if (id === 'set:upd') updAct();
   else if (id === 'upd:yes') updYes();
   else if (id === 'upd:no') updNo();
