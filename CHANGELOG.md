@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.10
+- Drag the bottom-right corner to resize the window
+- Closing the window now always stops the music and fully quits
+
 ## 0.2.9
 - Click the song, artist or album on the screen to open it in its drawer
 - Artists open as their albums first, then all their songs

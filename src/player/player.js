@@ -185,7 +185,15 @@ function bugs(t) { const L = [], ph = Math.floor(t * 8) & 1; scorp(L, 60 + 10 * 
 
 // ---------- window buttons ----------
 const MINUS = ["00000", "00000", "00000", "00000", "11111", "11111", "00000"], CROSS = ["10001", "11011", "01110", "00100", "01110", "11011", "10001"];
+// Resize grip in the bottom-right corner.
+const inGrip = (x, y) => x >= OW - 11 && y >= OH - 11 && !!API.resizeStart;
+let resizing = false;
+function grip() {
+  const hv = resizing || hover === 'grip';
+  for (let k = 0; k < 3; k++) for (let i = 0; i <= 2 + k * 3; i++) { const x = OW - 3 - i, y = OH - 5 - k * 3 + i; if (y > OH - 3) continue; oput(x, y, hv ? [230, 60, 50] : [200, 204, 212]); oput(x, y + 1, [10, 8, 8]); }
+}
 function winButtons() {
+  grip();
   [[WBMIN, 'min', MINUS], [WBCLOSE, 'close', CROSS]].forEach(([x0, id, pat]) => {
     const hv = hover === id, pd = press === id;
     for (let y = 0; y < WBS; y++) for (let x = 0; x < WBS; x++) { const c = y === 0 || x === 0 ? [210, 216, 224] : (y === WBS - 1 || x === WBS - 1) ? [24, 26, 30] : pd ? [96, 100, 108] : [136, 143, 152]; oput(x0 + x, WBY + y, c); }
@@ -952,10 +960,10 @@ cv.addEventListener('pointermove', (e) => {
   if (slDrag && press && press.startsWith('set:') && press !== 'set:intro') { const h = hits.find((q) => q.id === press); if (h && h.srow) setSlider(h, x); return; }
   if (press === 'sbar' && sbDrag) { const f = (y - sbDrag.trackY - sbDrag.th / 2) / Math.max(1, sbDrag.trackH - sbDrag.th); scroll = Math.round(Math.max(0, Math.min(1, f)) * sbDrag.maxScroll); dirty(); return; }
   if (press === 'seek') { seekToX(x); return; }
-  if (dragging) return;
-  const h = hudOn ? hitAt(x, y) : null, id = h ? h.id : null;
+  if (dragging || resizing) return;
+  const h = hudOn ? hitAt(x, y) : null, id = hudOn && inGrip(x, y) ? 'grip' : h ? h.id : null;
   if (id !== hover) { hover = id; dirty(); }
-  cv.style.cursor = !hudOn ? 'pointer' : inInc(x, y) ? 'ns-resize' : h ? 'pointer' : 'default';
+  cv.style.cursor = !hudOn ? 'pointer' : id === 'grip' ? 'nwse-resize' : inInc(x, y) ? 'ns-resize' : h ? 'pointer' : 'default';
 });
 cv.addEventListener('pointerleave', () => { if (!press && !dragging) { hover = null; dirty(); } });
 cv.addEventListener('pointerdown', (e) => {
@@ -963,18 +971,20 @@ cv.addEventListener('pointerdown', (e) => {
   if (!hudOn) { if (introSrc) { try { introSrc.stop(); } catch { } } st = performance.now() - T.scr[1] * 1000; dirty(); return; }
   const [x, y] = toPix(e);
   try { cv.setPointerCapture(e.pointerId); } catch { }
+  if (inGrip(x, y)) { resizing = true; API.resizeStart(); dirty(); return; }
   const h = hitAt(x, y);
   if (h) { press = h.id; if (h.srow) setSlider(h, x); if (h.id === 'seek') seekToX(x); if (h.id === 'sbar') { sbDrag = h; const f = (y - h.trackY - h.th / 2) / Math.max(1, h.trackH - h.th); scroll = Math.round(Math.max(0, Math.min(1, f)) * h.maxScroll); } dirty(); return; }
   if (inInc(x, y)) { press = 'inc'; lastY = y; return; }
   dragging = true; API.dragStart({ x: e.screenX - window.screenX, y: e.screenY - window.screenY });
 });
 cv.addEventListener('pointerup', (e) => {
+  if (resizing) { resizing = false; API.resizeEnd(); dirty(); return; }
   if (dragging) { dragging = false; API.dragEnd(); return; }
   const was = press; press = null; sbDrag = null; slDrag = null;
   if (was && was !== 'seek' && was !== 'inc' && was !== 'sbar' && !/^set:(fps|fx|crunch|static)$/.test(was)) { const [x, y] = toPix(e), h = hitAt(x, y); if (h && h.id === was) act(h); }
   dirty();
 });
-cv.addEventListener('lostpointercapture', () => { if (dragging) { dragging = false; API.dragEnd(); } });
+cv.addEventListener('lostpointercapture', () => { if (resizing) { resizing = false; API.resizeEnd(); } if (dragging) { dragging = false; API.dragEnd(); } });
 cv.addEventListener('wheel', (e) => {
   if (!hudOn) return; const [x, y] = toPix(e);
   if (inInc(x, y)) { e.preventDefault(); setVol(vol + (e.deltaY < 0 ? 5 : -5)); }

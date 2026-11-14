@@ -199,7 +199,18 @@ function log(tag, msg) {
   } catch {}
 }
 
-const playerSize = () => { const s = settings.scale || 2; return [BASE_W * s, BASE_H * s]; };
+const playerSize = () => { const s = settings.scale || 2; return [Math.round(BASE_W * s), Math.round(BASE_H * s)]; };
+// Closing the player closes everything. The hidden music-site windows are destroyed outright (a playing page can
+// refuse a normal close, which used to leave the app running with no window), and if anything still hangs on,
+// the process exits anyway a moment later.
+function quitAll() {
+  if (quitting === 'done') return;
+  quitting = 'done';
+  for (const w of BrowserWindow.getAllWindows()) { if (w !== playerWin) { try { w.webContents.setAudioMuted(true); w.destroy(); } catch {} } }
+  try { saveSettings(); } catch {}
+  setTimeout(() => app.exit(0), 1500);
+  app.quit();
+}
 let sizeFix = null;
 function lockSize() {
   if (!playerWin || playerWin.isDestroyed()) return;
@@ -218,7 +229,7 @@ function createPlayer() {
   const scale = settings.scale || pickScale();
   settings.scale = scale;
   const opts = {
-    width: BASE_W * scale, height: BASE_H * scale, useContentSize: true,
+    width: Math.round(BASE_W * scale), height: Math.round(BASE_H * scale), useContentSize: true,
     frame: false, resizable: false, maximizable: false, fullscreenable: false,
     backgroundColor: '#000000', title: APP_NAME, show: false,
     icon: fs.existsSync(ICON) ? nativeImage.createFromPath(ICON) : undefined,
@@ -236,7 +247,7 @@ function createPlayer() {
   playerWin.on('moved', () => { const [x, y] = playerWin.getPosition(); settings.x = x; settings.y = y; saveSettings(); });
   playerWin.on('resize', () => { clearTimeout(sizeFix); sizeFix = setTimeout(lockSize, 150); });
   playerWin.webContents.on('console-message', (e) => { const lvl = e.level; if (lvl === 'warning' || lvl === 'error' || lvl === 2 || lvl === 3) log('player-console', String(e.message).slice(0, 500)); });
-  playerWin.on('closed', () => { playerWin = null; quitting = true; app.quit(); });
+  playerWin.on('closed', () => { playerWin = null; quitAll(); });
 
   // System audio capture for the visualizer (Apple Music's protected audio can't be read directly).
   playerWin.webContents.session.setDisplayMediaRequestHandler((_req, cb) => {
@@ -354,7 +365,7 @@ function wireIpc() {
   ipcMain.on('settings:set', (_e, patch) => { if (patch && typeof patch === 'object') { Object.assign(settings, patch); saveSettings(); } });
 
   ipcMain.on('win:minimize', () => playerWin && playerWin.minimize());
-  ipcMain.on('win:close', () => { quitting = true; app.quit(); });
+  ipcMain.on('win:close', () => quitAll());
   // Custom drag. Always set the full bounds with the fixed size: moving with setPosition on a scaled
   // Windows display (125%, 150%) rounds the size each step and the window slowly grows.
   let dragTimer = null;
@@ -369,14 +380,33 @@ function wireIpc() {
     }, 12);
   });
   ipcMain.on('win:drag-end', () => { clearInterval(dragTimer); dragTimer = null; lockSize(); });
+  // Drag the bottom-right corner to resize. The shape stays the same; whole-number sizes snap so pixels stay crisp.
+  const maxScale = () => { const wa = screen.getDisplayMatching(playerWin.getBounds()).workAreaSize; return Math.max(1, Math.min(wa.width / BASE_W, wa.height / BASE_H)); };
+  ipcMain.on('win:resize-start', () => {
+    clearInterval(dragTimer);
+    if (!playerWin) return;
+    const b = playerWin.getContentBounds(), c0 = screen.getCursorScreenPoint(), gx = b.x + b.width - c0.x, gy = b.y + b.height - c0.y, max = maxScale();
+    dragTimer = setInterval(() => {
+      if (!playerWin) return clearInterval(dragTimer);
+      const c = screen.getCursorScreenPoint();
+      let s = Math.max((c.x + gx - b.x) / BASE_W, (c.y + gy - b.y) / BASE_H);
+      s = Math.max(1, Math.min(max, s));
+      if (Math.abs(s - Math.round(s)) < 0.07) s = Math.round(s);
+      if (s === settings.scale) return;
+      settings.scale = s;
+      const [w, h] = playerSize();
+      playerWin.setContentBounds({ x: b.x, y: b.y, width: w, height: h });
+    }, 16);
+  });
+  ipcMain.on('win:resize-end', () => { clearInterval(dragTimer); dragTimer = null; lockSize(); saveSettings(); });
   ipcMain.on('am:show-window', () => { if (amWin && !amWin.isDestroyed()) { amWin.show(); amWin.focus(); } });
   ipcMain.on('log:open', () => { shell.openPath(logPath()); });
   ipcMain.on('log:write', (_e, line) => log('player', line));
   ipcMain.on('win:scale', (_e, dir) => {
     if (!playerWin) return;
-    const max = Math.max(1, Math.floor(Math.min(screen.getPrimaryDisplay().workAreaSize.width / BASE_W, screen.getPrimaryDisplay().workAreaSize.height / BASE_H)));
-    settings.scale = Math.max(1, Math.min(max, (settings.scale || 2) + (dir > 0 ? 1 : -1)));
-    playerWin.setContentSize(BASE_W * settings.scale, BASE_H * settings.scale);
+    const max = Math.floor(maxScale()), cur = settings.scale || 2;
+    settings.scale = Math.max(1, Math.min(max, dir > 0 ? Math.floor(cur) + 1 : Math.ceil(cur) - 1));
+    playerWin.setContentSize(...playerSize());
     saveSettings();
   });
 }
@@ -424,10 +454,10 @@ function registerMediaKeys() {
   for (const [k, a] of Object.entries(map)) { try { globalShortcut.register(k, () => send('media-key', a)); } catch {} }
 }
 
-app.on('second-instance', () => { if (playerWin) { if (playerWin.isMinimized()) playerWin.restore(); playerWin.focus(); } });
-app.on('before-quit', () => { quitting = true; });
+app.on('second-instance', () => { if (playerWin && !playerWin.isDestroyed()) { if (playerWin.isMinimized()) playerWin.restore(); playerWin.show(); playerWin.focus(); } else quitAll(); });
+app.on('before-quit', () => { if (!quitting) quitting = true; });
 app.on('will-quit', () => { globalShortcut.unregisterAll(); });
-app.on('window-all-closed', () => app.quit());
+app.on('window-all-closed', () => quitAll());
 
 if (single) app.whenReady().then(async () => {
   loadSettings();
@@ -436,7 +466,7 @@ if (single) app.whenReady().then(async () => {
   wireIpc();
   signing.wireSigningIpc();
   ipcMain.on('setup:open', () => signing.openSetup(playerWin, settings, saveSettings));
-  updater.init({ log, send, getSettings: () => settings, onQuit: (relaunch) => { quitting = true; if (relaunch) app.relaunch(); app.quit(); } });
+  updater.init({ log, send, getSettings: () => settings, onQuit: (relaunch) => { if (relaunch) app.relaunch(); quitAll(); } });
   createPlayer();
   registerMediaKeys();
   renameShortcuts();

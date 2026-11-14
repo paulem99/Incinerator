@@ -1,11 +1,11 @@
 {
-  "version": "0.2.9",
-  "date": "2026-11-14T10:02:27.244Z",
-  "notes": "Click the song, artist or album on the screen to open it. Artists now show their albums, then all their songs.",
+  "version": "0.2.10",
+  "date": "2026-11-14T10:08:18.522Z",
+  "notes": "Drag the bottom-right corner to resize. Closing the window now always stops the music and fully quits.",
   "shell": "44.9.3",
   "app": {
-    "file": "incinerator-app-0.2.9.pak",
-    "size": 455730,
-    "sha256": "b93270fd8a63ecf72e1824cb7b51b8f9ea090978945947203ac8b96c0f233a20"
+    "file": "incinerator-app-0.2.10.pak",
+    "size": 456632,
+    "sha256": "c533da9690c75dbff1b1879ed6bfedf0760410fc91ed6ff815eb48f7e30b0074"
   }
 }

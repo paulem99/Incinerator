@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('incin', {
   close: () => ipcRenderer.send('win:close'),
   dragStart: (off) => ipcRenderer.send('win:drag-start', off),
   dragEnd: () => ipcRenderer.send('win:drag-end'),
+  resizeStart: () => ipcRenderer.send('win:resize-start'),
+  resizeEnd: () => ipcRenderer.send('win:resize-end'),
   scale: (dir) => ipcRenderer.send('win:scale', dir),
   onMediaKey: on('media-key'),
   updateGet: () => ipcRenderer.invoke('update:get'),
